@@ -117,70 +117,67 @@ const speciesDefs=[
  {name:'Lion',diet:'predator',speed:.72,scale:1.02,coat:0xc99a54},
  {name:'Antelope',diet:'grazer',speed:.82,scale:.92,coat:0xb9854d}
 ];
-function makePixelAnimalTexture(species){
- const canvas=document.createElement('canvas');canvas.width=192;canvas.height=48;
- const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
+
+function animalMat(color,roughness=0.94){return new THREE.MeshStandardMaterial({color,roughness})}
+function buildAnimalModel(species,scale){
+ const root=new THREE.Group(),parts={legs:[],tail:null,head:null};
  const palettes={
-  Zebra:{body:'#eee8d9',dark:'#252b2c',shade:'#c9c4b8',hoof:'#302e2b'},
-  Giraffe:{body:'#e9b84f',dark:'#9b5c2d',shade:'#c98b38',hoof:'#513c2b'},
-  Elephant:{body:'#9ca6a1',dark:'#626e6d',shade:'#788784',hoof:'#454f50'},
-  Lion:{body:'#d99a45',dark:'#8b5128',shade:'#b97532',hoof:'#503d2b'},
-  Antelope:{body:'#c99355',dark:'#67472e',shade:'#9b683e',hoof:'#45382d'}
+  Zebra:{body:0xe9e5d8,dark:0x202326,hoof:0x282522},
+  Giraffe:{body:0xd69a3e,dark:0x754324,hoof:0x49362a},
+  Elephant:{body:0x858d89,dark:0x626d69,hoof:0x555d5a},
+  Lion:{body:0xc99149,dark:0x81502d,hoof:0x49382a},
+  Antelope:{body:0xb9844c,dark:0x65452d,hoof:0x49372a}
  };
- const p=palettes[species];
- for(let frame=0;frame<4;frame++){
-  const ox=frame*96, R=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(ox+x*4,y*4,w*4,h*4)};
-  // soft pixel shadow
-  R(5,19,15,2,'#24251d88');R(7,18,11,1,'#24251d55');
-  const swing=[0,1,2,1][frame],legY=[0,1,0,-1][frame];
-  if(species==='Zebra'){
-   R(7,10,11,7,p.body);R(8,9,8,1,'#fff8e8');R(15,9,3,5,p.body);R(16,6,4,4,p.body);R(19,7,2,2,p.shade);R(19,8,1,1,p.dark);
-   for(const x of [8,11,14,17])R(x,10+(x%2),1,6,p.dark);
-   R(6,11,2,4,p.shade);R(5,12,2,1,p.dark);
-   for(const x of [8,10,15,17]){R(x,16+((x===10||x===17)?legY:-legY),1,4,p.dark);R(x,19+((x===10||x===17)?legY:-legY),1,1,p.hoof)}
-   R(6,10,1,4,p.dark);R(19,6,1,2,p.dark);
-  }else if(species==='Giraffe'){
-   R(6,12,11,6,p.body);R(14,5,3,10,p.body);R(15,3,4,4,p.body);R(18,4,2,2,p.shade);R(19,5,1,1,p.dark);
-   for(const [x,y] of [[7,13],[10,14],[13,12],[15,8],[15,11],[17,4]])R(x,y,1,1,p.dark);
-   R(16,2,1,2,p.dark);R(18,2,1,2,p.dark);R(5,13,2,1,p.shade);
-   for(const x of [7,9,14,16]){R(x,17+(x%2?legY:-legY),1,3,p.dark);R(x,19+(x%2?legY:-legY),1,1,p.hoof)}
-   R(5,12,1,4,p.dark);
-  }else if(species==='Elephant'){
-   R(6,9,13,10,p.body);R(4,10,4,7,p.shade);R(5,9,3,2,p.body);R(17,12,3,4,p.body);R(18,15,2,4,p.shade);R(19,18,1,1,p.dark);
-   R(19,14,1,2,'#e7ddbd');R(20,15,1,1,'#e7ddbd');R(18,10,1,1,p.dark);
-   R(7,18,2,3,p.dark);R(11,18,2,3,p.dark);R(16,18,2,3,p.dark);
-   for(const x of [7,11,16]){R(x,19+(x===11?legY:-legY),2,2,p.body);R(x,21+(x===11?legY:-legY),2,1,p.dark)}
-   R(5,13,1,4,p.dark);
-  }else if(species==='Lion'){
-   R(7,12,11,6,p.body);R(12,8,7,9,'#a9662f');R(13,7,5,2,'#b87938');R(14,9,4,6,'#c5873c');R(17,10,3,4,p.body);R(19,11,1,2,p.dark);
-   R(18,12,1,1,'#1d1b18');R(13,10,1,1,'#f3c36b');R(16,10,1,1,'#f3c36b');
-   R(6,13,2,2,p.shade);R(5,14,2,1,p.dark);
-   for(const x of [8,10,15,17]){R(x,17+(x%2?legY:-legY),1,3,p.dark);R(x,19+(x%2?legY:-legY),1,1,p.hoof)}
-   R(7,12,1,5,p.dark);
-  }else{
-   R(7,12,11,5,p.body);R(14,8,3,7,p.body);R(16,6,4,4,p.body);R(19,7,2,2,p.shade);R(20,8,1,1,p.dark);
-   R(16,3,1,4,p.dark);R(18,3,1,4,p.dark);R(15,4,1,2,p.shade);
-   R(6,12,2,3,p.shade);R(5,13,2,1,p.dark);
-   for(const x of [8,10,15,17]){R(x,16+(x%2?legY:-legY),1,4,p.dark);R(x,19+(x%2?legY:-legY),1,1,p.hoof)}
-   R(18,10,1,1,'#f4d98d');
-  }
-  // eye highlight and tiny ground glint
-  R(20,8,1,1,'#171615');R(21,9,1,1,'#fff0c8');
+ const p=palettes[species],bodyMat=animalMat(p.body),darkMat=animalMat(p.dark),hoofMat=animalMat(p.hoof),cream=animalMat(0xe8d8b8),black=animalMat(0x211d19);
+ const sphere=new THREE.SphereGeometry(1,16,12);
+ function blob(parent,material,pos,size){const m=new THREE.Mesh(sphere,material);m.position.set(...pos);m.scale.set(...size);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
+ // Deep torso, shoulder and rump give each animal a solid three-dimensional silhouette.
+ blob(root,bodyMat,[0,.92,0],[.94,.48,.43]);
+ blob(root,bodyMat,[0,1.02,.42],[.47,.48,.43]);
+ blob(root,bodyMat,[0,.98,-.48],[.53,.46,.42]);
+ const legXs=[-.57,.57],legZs=[-.29,.29];
+ for(let x of legXs)for(let z of legZs){
+  const pivot=new THREE.Group();pivot.position.set(x,.82,z);root.add(pivot);
+  const upper=new THREE.Mesh(new THREE.CapsuleGeometry(species==='Elephant'?.105:.065,.32,4,8),bodyMat);upper.position.y=-.23;upper.castShadow=true;pivot.add(upper);
+  const lower=new THREE.Mesh(new THREE.CapsuleGeometry(species==='Elephant'?.09:.045,.28,4,8),darkMat);lower.position.set(0,-.53,.015);lower.castShadow=true;pivot.add(lower);
+  const hoof=new THREE.Mesh(new THREE.SphereGeometry(species==='Elephant'?.13:.085,10,8),hoofMat);hoof.scale.set(1,.55,1.2);hoof.position.set(0,-.72,.035);hoof.castShadow=true;pivot.add(hoof);
+  parts.legs.push(pivot);
  }
- const texture=new THREE.CanvasTexture(canvas);texture.magFilter=THREE.NearestFilter;texture.minFilter=THREE.NearestFilter;texture.generateMipmaps=false;texture.colorSpace=THREE.SRGBColorSpace;texture.repeat.set(.25,1);texture.offset.set(0,0);texture.needsUpdate=true;return texture;
+ // Species-specific neck, head and face proportions.
+ if(species==='Giraffe'){
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(.13,.22,1.05,12),bodyMat);neck.position.set(0,1.58,.48);neck.rotation.x=-.18;neck.castShadow=true;root.add(neck);
+  blob(root,bodyMat,[0,2.12,.58],[.22,.28,.25]);
+  for(let i=0;i<16;i++){const spot=blob(root,darkMat,[(Math.random()-.5)*.34,1.08+Math.random()*.8,.55+(Math.random()-.5)*.25],[.075,.09,.025]);spot.rotation.z=Math.random()*.8}
+  for(const x of [-.11,.11]){const oss=new THREE.Mesh(new THREE.CylinderGeometry(.025,.035,.15,7),darkMat);oss.position.set(x,2.42,.58);root.add(oss);blob(root,cream,[x,2.5,.58],[.045,.05,.045])}
+ }else if(species==='Elephant'){
+  blob(root,bodyMat,[0,1.45,.48],[.43,.58,.38]);blob(root,bodyMat,[-.36,1.48,.48],[.32,.4,.12]);blob(root,bodyMat,[.36,1.48,.48],[.32,.4,.12]);
+  const trunk=new THREE.Mesh(new THREE.CatmullRomCurve3([new THREE.Vector3(0,1.55,.78),new THREE.Vector3(0,1.15,.98),new THREE.Vector3(0,.72,1.02),new THREE.Vector3(0,.62,.88)]).getPoints(20).length?new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0,1.55,.78),new THREE.Vector3(0,1.15,.98),new THREE.Vector3(0,.72,1.02),new THREE.Vector3(0,.62,.88)]),20,.105,8,false):sphere,bodyMat);root.add(trunk);
+  for(const x of [-.35,.35]){const tusk=new THREE.Mesh(new THREE.ConeGeometry(.07,.34,9),cream);tusk.position.set(x*.72,1.12,.92);tusk.rotation.x=-.65;root.add(tusk)}
+ }else if(species==='Lion'){
+  blob(root,darkMat,[0,1.38,.53],[.57,.59,.48]);blob(root,bodyMat,[0,1.52,.88],[.28,.25,.26]);
+  for(const x of [-.17,.17])blob(root,bodyMat,[x,1.63,.99],[.13,.12,.13]);
+ }else{
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(species==='Zebra'?.19:.14,.25,.55,12),bodyMat);neck.position.set(0,1.22,.48);neck.rotation.x=-.38;neck.castShadow=true;root.add(neck);
+  blob(root,bodyMat,[0,1.48,.72],[.25,.24,.3]);
+  for(const x of [-.2,.2]){const ear=blob(root,bodyMat,[x,1.63,.62],[.075,.18,.07]);ear.rotation.z=x<0?-.45:.45}
+  if(species==='Antelope')for(const x of [-.11,.11]){const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(x,1.66,.7),new THREE.Vector3(x*1.3,1.95,.72),new THREE.Vector3(x*1.7,2.18,.78)]);const horn=new THREE.Mesh(new THREE.TubeGeometry(curve,12,.027,6,false),darkMat);root.add(horn)}
+ }
+ // Eyes and muzzle make the head readable from the game camera.
+ for(const x of [-.13,.13])blob(root,black,[x,1.52,.94],[.035,.04,.025]);
+ blob(root,species==='Elephant'?bodyMat:darkMat,[0,species==='Giraffe'?2.02:1.36,species==='Elephant'?.78:1.0],[.13,.09,.12]);
+ const tailCurve=new THREE.CatmullRomCurve3([new THREE.Vector3(0,.98,-.78),new THREE.Vector3(0,.8,-1.05),new THREE.Vector3(0,.55,-1.22)]);
+ parts.tail=new THREE.Mesh(new THREE.TubeGeometry(tailCurve,10,.025,6,false),darkMat);root.add(parts.tail);
+ if(species==='Zebra'){
+  // Thin curved dark bands wrap the flanks instead of using a flat sprite texture.
+  for(let side of [-1,1])for(let i=0;i<7;i++){const z=-.62+i*.19;const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(-.55,.98,z),new THREE.Vector3(-.48,1.25,z+.035),new THREE.Vector3(-.2,1.36,z+.05),new THREE.Vector3(.08,1.38,z+.05),new THREE.Vector3(.42,1.25,z+.035),new THREE.Vector3(.55,.98,z)]);const stripe=new THREE.Mesh(new THREE.TubeGeometry(curve,12,.025,5,false),darkMat);stripe.position.x=side*.005;root.add(stripe)}
+ }
+ root.scale.setScalar(scale);return {root,parts};
 }
-const pixelAnimalTextures=Object.fromEntries(speciesDefs.map(sp=>[sp.name,makePixelAnimalTexture(sp.name)]));
 function addCreature(){
  const si=Math.floor(Math.random()*speciesDefs.length),sp=speciesDefs[si],g=new THREE.Group();
- const texture=pixelAnimalTextures[sp.name].clone();texture.needsUpdate=true;
- const material=new THREE.SpriteMaterial({map:texture,transparent:true,alphaTest:.08,depthWrite:true});
- const sprite=new THREE.Sprite(material);
- const sizes={Zebra:[1.45,1.45],Giraffe:[1.4,1.85],Elephant:[1.8,1.65],Lion:[1.5,1.5],Antelope:[1.35,1.5]};
- sprite.scale.set(sizes[sp.name][0]*sp.scale,sizes[sp.name][1]*sp.scale,1);
- sprite.position.y=sizes[sp.name][1]*sp.scale*.5;sprite.userData.baseY=sprite.position.y;
- g.add(sprite);
+ const built=buildAnimalModel(sp.name,sp.scale);g.add(built.root);
  g.position.set((Math.random()-.5)*13,0,(Math.random()-.5)*13);g.position.y=heightAt(g.position.x,g.position.z);
- g.userData={species:sp.name,diet:sp.diet,phase:Math.random()*6.28,speed:sp.speed,legs:[],model:null,parts:{},sprite,texture,animTime:Math.random()*8,age:0,hunger:Math.random()*.2,thirst:Math.random()*.2,health:1,feed:0,action:'wander',target:new THREE.Vector3(g.position.x+(Math.random()-.5)*5,0,g.position.z+(Math.random()-.5)*5),think:Math.random()*3,walk:0,gait:0,moveSpeed:0,heading:g.rotation.y,rest:0,turnBias:(Math.random()-.5)*.12};
+ g.userData={species:sp.name,diet:sp.diet,phase:Math.random()*6.28,speed:sp.speed,legs:built.parts.legs,model:built.root,parts:built.parts,animTime:Math.random()*8,age:0,hunger:Math.random()*.2,thirst:Math.random()*.2,health:1,feed:0,action:'wander',target:new THREE.Vector3(g.position.x+(Math.random()-.5)*5,0,g.position.z+(Math.random()-.5)*5),think:Math.random()*3,walk:0,gait:0,moveSpeed:0,heading:g.rotation.y,rest:0,turnBias:(Math.random()-.5)*.12};
  creatures.add(g)
 }
 for(let i=0;i<20;i++)addCreature();
@@ -222,12 +219,12 @@ if(moving){u.walk+=dt*stride*5;u.gait+=dt*stride*(u.action==='flee'||u.action===
 else{u.moveSpeed*=Math.max(0,1-dt*2.4);if(u.action==='drink')u.thirst=Math.max(0,u.thirst-dt*.22);if(u.action==='graze'){const node=foodNodes.find(n=>n.regrow<=0&&Math.hypot(n.x-c.position.x,n.z-c.position.z)<.85);if(node){u.hunger=Math.max(0,u.hunger-dt*.25);if(u.hunger<.12)node.regrow=28}}}
 }
 u.animTime+=dt;const x=c.position.x,z=c.position.z;c.position.y=heightAt(x,z);
-if(u.sprite){
- const frame=moving?Math.floor(u.gait*1.7)%4:(Math.floor(u.animTime*1.1+u.phase)%2);
- u.texture.offset.x=frame*.25;
- u.sprite.scale.x=Math.abs(u.sprite.scale.x)*(Math.sin(c.rotation.y)>=0?1:-1);
- u.sprite.position.y=u.sprite.userData.baseY+Math.abs(Math.sin(u.gait*2))*(moving ? 0.045 : 0.012);
- u.sprite.material.rotation=(u.action==='graze'||u.action==='drink') ? 0.06 : 0;
+if(u.legs&&u.legs.length){
+ const gait=Math.sin(u.gait),idle=Math.sin(u.animTime*1.4+u.phase)*.025;
+ u.legs.forEach((leg,i)=>{const phase=(i===0||i===3)?0:Math.PI;leg.rotation.x=moving?Math.sin(u.gait+phase)*(u.action==='flee'?0.72:.42):idle});
+ if(u.parts?.tail)u.parts.tail.rotation.y=Math.sin(u.animTime*2.1+u.phase)*.13;
+ if(u.action==='graze'||u.action==='drink'){if(u.parts?.head)u.parts.head.rotation.x=.12}
+ else if(u.parts?.head)u.parts.head.rotation.x=0;
 }
 }
 if(rainDrops&&dt>0){const a=rainDrops.geometry.attributes.position;for(let i=0;i<a.count;i++){let y=a.getY(i)-dt*(weatherMode==='storm'?19:12);if(y<0)y=24;a.setY(i,y)}a.needsUpdate=true}controls.update();world.updateMatrixWorld();renderer.render(scene,camera)}}requestAnimationFrame(animate);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});updateStats();
