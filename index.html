@@ -41,9 +41,9 @@
 import * as THREE from 'three';import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 const mount=document.getElementById('world');const scene=new THREE.Scene();scene.background=new THREE.Color(0xd6a36d);scene.fog=new THREE.FogExp2(0xc99a68,.008);
 const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,400);camera.position.set(0,30,43);camera.lookAt(0,0,0);
-const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=false;renderer.outputColorSpace=THREE.SRGBColorSpace;mount.appendChild(renderer.domElement);
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;mount.appendChild(renderer.domElement);
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.target.set(0,0,0);controls.maxPolarAngle=Math.PI*.47;controls.minDistance=10;controls.maxDistance=55;
-scene.add(new THREE.HemisphereLight(0xf5d8a7,0x655337,2.15));const sun=new THREE.DirectionalLight(0xffd09a,3.2);sun.position.set(-12,22,9);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xf5d8a7,0x655337,2.15));const sun=new THREE.DirectionalLight(0xffd09a,3.2);sun.position.set(-12,22,9);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-48;sun.shadow.camera.right=48;sun.shadow.camera.top=48;sun.shadow.camera.bottom=-48;sun.shadow.bias=-.00025;scene.add(sun);
 const world=new THREE.Group();scene.add(world);const creatures=new THREE.Group();world.add(creatures);const weather=new THREE.Group();scene.add(weather);
 const mat=(color,roughness=1)=>new THREE.MeshStandardMaterial({color,roughness});const groundMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,vertexColors:true,side:THREE.DoubleSide});const waterMat=new THREE.MeshStandardMaterial({color:0x163b54,roughness:.3,metalness:.2,transparent:true,opacity:.88});
 const water=new THREE.Mesh(new THREE.CircleGeometry(82,128),waterMat);water.rotation.x=-Math.PI/2;water.position.y=-1.05;world.add(water);
@@ -120,10 +120,17 @@ for(let n=0;n<36;n++){
 const barkTexture=new THREE.CanvasTexture(barkCanvas);
 barkTexture.wrapS=barkTexture.wrapT=THREE.RepeatWrapping;barkTexture.repeat.set(1,1);
 barkTexture.colorSpace=THREE.SRGBColorSpace;
+trunkMat.map=barkTexture;trunkMat.bumpMap=barkTexture;trunkMat.bumpScale=.055;trunkMat.needsUpdate=true;
 const heroBark=new THREE.MeshStandardMaterial({map:barkTexture,bumpMap:barkTexture,bumpScale:.075,color:0xb3a18a,roughness:1});
 const heroBarkLight=new THREE.MeshStandardMaterial({map:barkTexture,bumpMap:barkTexture,bumpScale:.11,color:0xc0a98a,roughness:1});
 const heroLeafMats=[0x526d32,0x637b3a,0x718442,0x465f2d,0x82904a,0x3e572b].map(color=>new THREE.MeshStandardMaterial({color,roughness:1}));
-const leafShape=new THREE.SphereGeometry(1,8,6);
+// Individual tapered leaf silhouettes replace the rounded bead-like foliage.
+const leafOutline=new THREE.Shape();
+leafOutline.moveTo(0,0);
+leafOutline.quadraticCurveTo(.34,.18,.72,.04);
+leafOutline.quadraticCurveTo(.42,-.2,0,0);
+const leafShape=new THREE.ShapeGeometry(leafOutline,5);
+leafShape.computeVertexNormals();
 const heroTreeCount=44;
 for(let i=0;i<heroTreeCount;i++){
  const a=i*2.399963,r=7+(i%11)*2.65,x=Math.cos(a)*r,z=Math.sin(a)*r,bio=biomeAt(x,z);
@@ -228,7 +235,28 @@ const speciesDefs=[
  {name:'Antelope',diet:'grazer',speed:.82,scale:.92,coat:0xb9854d}
 ];
 
-function animalMat(color,roughness=0.94){return new THREE.MeshStandardMaterial({color,roughness})}
+// Shared fine-grain surface maps keep skin and coats from reading as smooth clay.
+const animalSurfaceCanvas=document.createElement('canvas');animalSurfaceCanvas.width=256;animalSurfaceCanvas.height=256;
+const animalSurfaceCtx=animalSurfaceCanvas.getContext('2d');
+const animalPixels=animalSurfaceCtx.createImageData(256,256);
+for(let i=0;i<animalPixels.data.length;i+=4){
+ const grain=112+Math.random()*92;
+ animalPixels.data[i]=grain;animalPixels.data[i+1]=grain;animalPixels.data[i+2]=grain;animalPixels.data[i+3]=255;
+}
+animalSurfaceCtx.putImageData(animalPixels,0,0);
+for(let n=0;n<620;n++){
+ animalSurfaceCtx.strokeStyle=n%3?'rgba(35,28,20,.10)':'rgba(245,235,215,.12)';
+ animalSurfaceCtx.lineWidth=.35+Math.random()*1.1;
+ animalSurfaceCtx.beginPath();const x=Math.random()*256,y=Math.random()*256;
+ animalSurfaceCtx.moveTo(x,y);animalSurfaceCtx.lineTo(x+(Math.random()-.5)*4,y+2+Math.random()*13);animalSurfaceCtx.stroke();
+}
+const animalSurfaceTexture=new THREE.CanvasTexture(animalSurfaceCanvas);
+animalSurfaceTexture.wrapS=animalSurfaceTexture.wrapT=THREE.RepeatWrapping;
+animalSurfaceTexture.repeat.set(1,1);animalSurfaceTexture.colorSpace=THREE.SRGBColorSpace;
+const animalBumpTexture=animalSurfaceTexture.clone();animalBumpTexture.colorSpace=THREE.NoColorSpace;
+function animalMat(color,roughness=0.94){
+ return new THREE.MeshStandardMaterial({color,map:animalSurfaceTexture,bumpMap:animalBumpTexture,bumpScale:.035,roughness,metalness:0});
+}
 function buildAnimalModel(species,scale){
  const root=new THREE.Group(),parts={legs:[],tail:null,head:null};
  const palettes={
