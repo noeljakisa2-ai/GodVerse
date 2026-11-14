@@ -10,7 +10,7 @@
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 </head>
 <body><div id="world"></div><div class="veil"></div>
-<header class="top"><div class="brand"><div class="sigil">ÃÂ¢ÃÂÃÂ§</div><div><strong>GODVERSE</strong><small>THE LIVING WORLD PROJECT</small></div></div><div class="topright"><div class="pill"><span class="dot"></span>WORLD ACTIVE</div><div class="pill">PROTOTYPE 0.8</div></div></header>
+<header class="top"><div class="brand"><div class="sigil">ÃÂ¢ÃÂÃÂ§</div><div><strong>GODVERSE</strong><small>THE LIVING WORLD PROJECT</small></div></div><div class="topright"><div class="pill"><span class="dot"></span>WORLD ACTIVE</div><div class="pill">PROTOTYPE 0.9 • BIOME SANDBOX</div></div></header>
 <section class="left"><div class="eyebrow">A universe in your hands</div><h1>Shape a<br>living world.</h1><p>Every creature has a place. Every choice changes the story. You are the force behind creation.</p></section>
 <aside class="stats"><div class="paneltitle">World observation</div><div class="stat"><span>World age</span><b id="age">Day 001</b></div><div class="stat"><span>Life forms</span><b id="life">12</b></div><div class="stat"><span>Climate</span><b id="climate">Temperate</b></div><div class="stat"><span>World state</span><b id="state">Peaceful</b></div><div class="stat"><span>Healthy</span><b id="healthy">12</b></div><div class="stat"><span>Hungry</span><b id="hungry">0</b></div><div class="stat"><span>Population trend</span><b id="trend">Stable</b></div></aside>
 <div class="toast" id="toast">Life has emerged.</div>
@@ -25,10 +25,12 @@ const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.se
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.target.set(0,1.2,0);controls.maxPolarAngle=Math.PI*.48;controls.minDistance=10;controls.maxDistance=55;
 scene.add(new THREE.HemisphereLight(0xf5d8a7,0x655337,2.15));const sun=new THREE.DirectionalLight(0xffd09a,3.2);sun.position.set(-12,22,9);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
 const world=new THREE.Group();scene.add(world);const creatures=new THREE.Group();world.add(creatures);const weather=new THREE.Group();scene.add(weather);
-const mat=(color,roughness=1)=>new THREE.MeshStandardMaterial({color,roughness});const groundMat=mat(0x897747);const waterMat=new THREE.MeshStandardMaterial({color:0x163b54,roughness:.3,metalness:.2,transparent:true,opacity:.88});
+const mat=(color,roughness=1)=>new THREE.MeshStandardMaterial({color,roughness});const groundMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,vertexColors:true});const waterMat=new THREE.MeshStandardMaterial({color:0x163b54,roughness:.3,metalness:.2,transparent:true,opacity:.88});
 const water=new THREE.Mesh(new THREE.CircleGeometry(82,128),waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.65;world.add(water);
-function heightAt(x,z){const d=Math.sqrt(x*x+z*z);return Math.max(-.38,Math.sin(d*.12)*.32+Math.cos(x*.09)*.22+Math.sin(z*.11+x*.04)*.16+Math.max(0,1-d/20)*1.1-.35)}
-const N=150,size=110,geo=new THREE.PlaneGeometry(size,size,N,N);geo.rotateX(-Math.PI/2);const pos=geo.attributes.position;for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i);pos.setY(i,heightAt(x,z))}geo.computeVertexNormals();const land=new THREE.Mesh(geo,groundMat);land.receiveShadow=true;land.castShadow=true;world.add(land);
+function biomeAt(x,z){const edge=Math.max(Math.abs(x),Math.abs(z));if(edge>47)return 'shore';if(x>13&&z<-5)return 'desert';if(x<-14&&z<3)return 'woodland';if(x<-13&&z>12)return 'wetland';if(x>13&&z>10)return 'highlands';return 'savanna'}
+function heightAt(x,z){const d=Math.sqrt(x*x+z*z),desert=biomeAt(x,z)==='desert'?Math.sin(x*.23+z*.12)*.48:0,high=Math.exp(-((x-27)**2+(z-25)**2)/190)*2.7,wet=biomeAt(x,z)==='wetland'?-0.16:0;return Math.max(-.42,Math.sin(d*.12)*.32+Math.cos(x*.09)*.22+Math.sin(z*.11+x*.04)*.16+Math.max(0,1-d/20)*1.1-.35+desert+high+wet)}
+const biomeColors={savanna:0x9b925b,desert:0xc6a36a,woodland:0x65764a,wetland:0x526d54,highlands:0x817c70,shore:0xc4b58b};
+const N=150,size=110,geo=new THREE.PlaneGeometry(size,size,N,N);geo.rotateX(-Math.PI/2);const pos=geo.attributes.position,terrainColors=[];for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i);pos.setY(i,heightAt(x,z));const c=new THREE.Color(biomeColors[biomeAt(x,z)]);const shade=.92+Math.sin(x*.17+z*.11)*.055+Math.cos(z*.19)*.035;c.multiplyScalar(shade);terrainColors.push(c.r,c.g,c.b)}geo.setAttribute('color',new THREE.Float32BufferAttribute(terrainColors,3));geo.computeVertexNormals();const land=new THREE.Mesh(geo,groundMat);land.receiveShadow=true;land.castShadow=true;world.add(land);
 // Far-off Serengeti kopjes: layered weathered granite outcrops on the horizon.
 const kopjeMats=[mat(0x75634c),mat(0x927957),mat(0x5f5545)];
 for(const [kx,kz,sc] of [[-39,-31,1.0],[34,-39,.78],[43,18,1.15],[-35,39,.72]]){const base=heightAt(kx,kz),hill=new THREE.Group();hill.position.set(kx,base,kz);for(let q=0;q<5;q++){const boulder=new THREE.Mesh(new THREE.DodecahedronGeometry(1.25,1),kopjeMats[q%3]);boulder.position.set((Math.random()-.5)*1.5,1.05+q*.42,(Math.random()-.5)*1.4);boulder.scale.set(sc*(1.15-q*.08),sc*(1.05-q*.12),sc*(.9-q*.07));boulder.rotation.set(.12*q,Math.random()*2,.08*q);boulder.castShadow=true;boulder.receiveShadow=true;hill.add(boulder)}world.add(hill)}
@@ -60,9 +62,10 @@ const palmLeaves=new THREE.InstancedMesh(leafGeo,palmMat,palmCap);
 const dummy=new THREE.Object3D(),up=new THREE.Vector3(0,1,0),dir=new THREE.Vector3();
 let ti=0,bi=0,li=0,pi=0,pli=0;
 for(let i=0;i<treeCount;i++){
- const a=Math.random()*Math.PI*2,r=4+Math.random()*36,x=Math.cos(a)*r,z=Math.sin(a)*r;
- // The terrain is a complete raised land mesh; clamp to its actual floor instead of discarding trees.
- const y=Math.max(-.18,heightAt(x,z)),type=i%11===0?'palm':'broad';
+ const a=Math.random()*Math.PI*2,r=4+Math.random()*36,x=Math.cos(a)*r,z=Math.sin(a)*r,bio=biomeAt(x,z);
+ // Tree species follow the biome: dense woodland, palms in wet ground, and scattered acacias in savanna.
+ const y=Math.max(-.18,heightAt(x,z)),type=bio==='wetland'?'palm':bio==='woodland'?(i%4===0?'pine':'broad'):bio==='desert'?'broad':i%11===0?'palm':'broad';
+ if(bio==='desert'&&i%3!==0)continue;
  const scale=.78+Math.random()*.8,height=(type==='palm'?2.35: type==='pine'?2.5:2.15)*scale;
  dummy.position.set(x,y+height*.5,z);dummy.rotation.set(0,Math.random()*.3,0);dummy.scale.set(scale,height,scale);dummy.updateMatrix();trunks.setMatrixAt(ti++,dummy.matrix);
  if(type==='broad'){
@@ -79,9 +82,14 @@ trunks.count=ti;branches.count=bi;broadCanopy.count=li;pineCanopy.count=pi;palmL
 world.add(trunks,branches,broadCanopy,pineCanopy,palmLeaves);
 // Dense short grass tufts spread across open ground, kept low enough not to obscure animals.
 const grassCount=1800,grass=new THREE.InstancedMesh(bladeGeo,grassMat,grassCount*3);let gi=0;
-for(let i=0;i<grassCount;i++){const a=Math.random()*Math.PI*2,r=3+Math.random()*41,x=Math.cos(a)*r,z=Math.sin(a)*r,y=Math.max(-.3,heightAt(x,z));for(let b=0;b<3;b++){const ang=b*Math.PI*2/3+Math.random()*.4,h=.22+Math.random()*.24;dummy.position.set(x+Math.cos(ang)*.09,y+h*.5,z+Math.sin(ang)*.09);dummy.rotation.set(.12*Math.random(),ang,.18*Math.cos(ang));dummy.scale.set(.65,h,.65);dummy.updateMatrix();grass.setMatrixAt(gi,dummy.matrix);grass.setColorAt(gi,new THREE.Color().setHSL(.105+Math.random()*.075,.38,.28+Math.random()*.16));gi++}}
+for(let i=0;i<grassCount;i++){const a=Math.random()*Math.PI*2,r=3+Math.random()*41,x=Math.cos(a)*r,z=Math.sin(a)*r,bio=biomeAt(x,z),y=Math.max(-.3,heightAt(x,z));for(let b=0;b<3;b++){const ang=b*Math.PI*2/3+Math.random()*.4,h=.18+Math.random()*.3;dummy.position.set(x+Math.cos(ang)*.09,y+h*.5,z+Math.sin(ang)*.09);dummy.rotation.set(.12*Math.random(),ang,.18*Math.cos(ang));dummy.scale.set(.65,h,.65);dummy.updateMatrix();grass.setMatrixAt(gi,dummy.matrix);const tint=bio==='desert'?[.105,.42,.42]:bio==='woodland'?[.27,.48,.3]:bio==='wetland'?[.31,.45,.28]:bio==='highlands'?[.16,.28,.42]:bio==='shore'?[.12,.25,.52]:[.105,.38,.36];grass.setColorAt(gi,new THREE.Color().setHSL(tint[0]+Math.random()*.035,tint[1],tint[2]+Math.random()*.12));gi++}}
 grass.count=gi;grass.instanceMatrix.needsUpdate=true;grass.receiveShadow=true;world.add(grass);
 for(let i=0;i<28;i++){const a=Math.random()*Math.PI*2,r=3+Math.random()*13,x=Math.cos(a)*r,z=Math.sin(a)*r,y=heightAt(x,z);if(y>.05){const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.2+Math.random()*.35,0),rockMat);rock.position.set(x,y+.12,z);rock.rotation.set(Math.random(),Math.random(),Math.random());rock.castShadow=true;world.add(rock)}}
+// Biome landmarks make the map read as a true sandbox rather than one uniform field.
+const biomeRockMats=[mat(0x8d806e),mat(0xb49a70),mat(0x596f55)];
+for(let i=0;i<105;i++){const a=i*2.399,r=6+(i%17)*2.45,x=Math.cos(a)*r,z=Math.sin(a)*r,bio=biomeAt(x,z);if(bio==='savanna'&&i%2)continue;const y=heightAt(x,z),shrub=new THREE.Group();shrub.position.set(x,y,z);const col=bio==='desert'?biomeRockMats[1]:bio==='wetland'?biomeRockMats[2]:biomeRockMats[0];for(let k=0;k<3;k++){const bush=new THREE.Mesh(new THREE.DodecahedronGeometry(.22+(k%2)*.1,0),col);bush.position.set((k-1)*.22,.18+(k%2)*.08,(k%2)*.16);bush.scale.set(1,.65,1);shrub.add(bush)}world.add(shrub)}
+// Rocky highland ridge and low dunes use the same terrain height field as the ground mesh.
+for(let i=0;i<18;i++){const x=17+(i%6)*3.2,z=14+Math.floor(i/6)*4.2,y=heightAt(x,z),peak=new THREE.Mesh(new THREE.DodecahedronGeometry(.8+(i%3)*.35,1),biomeRockMats[0]);peak.position.set(x,y+.28,z);peak.scale.set(1.1,1.25,.95);peak.rotation.y=i*.7;peak.castShadow=true;world.add(peak)}
 const speciesDefs=[
  {name:'Zebra',diet:'grazer',speed:.62,scale:1,modelScale:.32,url:'https://cdn.3dassets.dev/assets/6547/v1/model.glb',coat:0xe8e2d2},
  {name:'Giraffe',diet:'grazer',speed:.48,scale:1.35,modelScale:.27,url:'https://cdn.3dassets.dev/assets/6535/v1/model.glb',coat:0xd69b43},
