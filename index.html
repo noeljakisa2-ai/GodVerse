@@ -177,7 +177,7 @@ function addCreature(){
  const sprite=new THREE.Sprite(material);
  const sizes={Zebra:[1.45,1.45],Giraffe:[1.4,1.85],Elephant:[1.8,1.65],Lion:[1.5,1.5],Antelope:[1.35,1.5]};
  sprite.scale.set(sizes[sp.name][0]*sp.scale,sizes[sp.name][1]*sp.scale,1);
- sprite.position.y=sizes[sp.name][1]*sp.scale*.5;
+ sprite.position.y=sizes[sp.name][1]*sp.scale*.5;sprite.userData.baseY=sprite.position.y;
  g.add(sprite);
  g.position.set((Math.random()-.5)*13,0,(Math.random()-.5)*13);g.position.y=heightAt(g.position.x,g.position.z);
  g.userData={species:sp.name,diet:sp.diet,phase:Math.random()*6.28,speed:sp.speed,legs:[],model:null,parts:{},sprite,texture,animTime:Math.random()*8,age:0,hunger:Math.random()*.2,thirst:Math.random()*.2,health:1,feed:0,action:'wander',target:new THREE.Vector3(g.position.x+(Math.random()-.5)*5,0,g.position.z+(Math.random()-.5)*5),think:Math.random()*3,walk:0,gait:0,moveSpeed:0,heading:g.rotation.y,rest:0,turnBias:(Math.random()-.5)*.12};
@@ -226,8 +226,8 @@ if(u.sprite){
  const frame=moving?Math.floor(u.gait*1.7)%4:(Math.floor(u.animTime*1.1+u.phase)%2);
  u.texture.offset.x=frame*.25;
  u.sprite.scale.x=Math.abs(u.sprite.scale.x)*(Math.sin(c.rotation.y)>=0?1:-1);
- u.sprite.position.y=(u.species==='Giraffe'?.91:u.species==='Elephant'?.82:.68)+Math.abs(Math.sin(u.gait*2))*(moving?.045:.012);
- u.sprite.material.rotation=(u.action==='graze'||u.action==='drink')?.06:0;
+ u.sprite.position.y=u.sprite.userData.baseY+Math.abs(Math.sin(u.gait*2))*(moving ? 0.045 : 0.012);
+ u.sprite.material.rotation=(u.action==='graze'||u.action==='drink') ? 0.06 : 0;
 }
 if(rainDrops&&dt>0){const a=rainDrops.geometry.attributes.position;for(let i=0;i<a.count;i++){let y=a.getY(i)-dt*(weatherMode==='storm'?19:12);if(y<0)y=24;a.setY(i,y)}a.needsUpdate=true}controls.update();world.updateMatrixWorld();renderer.render(scene,camera)}requestAnimationFrame(animate);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});updateStats();
 </script></body></html>
