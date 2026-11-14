@@ -10,12 +10,12 @@
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 </head>
 <body><div id="world"></div><div class="veil"></div>
-<header class="top"><div class="brand"><div class="sigil">â§</div><div><strong>GODVERSE</strong><small>THE LIVING WORLD PROJECT</small></div></div><div class="topright"><div class="pill"><span class="dot"></span>WORLD ACTIVE</div><div class="pill">PROTOTYPE 0.2</div></div></header>
+<header class="top"><div class="brand"><div class="sigil">â§</div><div><strong>GODVERSE</strong><small>THE LIVING WORLD PROJECT</small></div></div><div class="topright"><div class="pill"><span class="dot"></span>WORLD ACTIVE</div><div class="pill">PROTOTYPE 0.3</div></div></header>
 <section class="left"><div class="eyebrow">A universe in your hands</div><h1>Shape a<br>living world.</h1><p>Every creature has a place. Every choice changes the story. You are the force behind creation.</p></section>
 <aside class="stats"><div class="paneltitle">World observation</div><div class="stat"><span>World age</span><b id="age">Day 001</b></div><div class="stat"><span>Life forms</span><b id="life">12</b></div><div class="stat"><span>Climate</span><b id="climate">Temperate</b></div><div class="stat"><span>World state</span><b id="state">Peaceful</b></div><div class="stat"><span>Healthy</span><b id="healthy">12</b></div><div class="stat"><span>Hungry</span><b id="hungry">0</b></div><div class="stat"><span>Population trend</span><b id="trend">Stable</b></div></aside>
 <div class="toast" id="toast">Life has emerged.</div>
 <section class="bottom"><div class="actions"><button class="primary" id="lifeBtn">â¦ Create life</button><button id="rainBtn">â Bring rain</button><button id="stormBtn">Ï Summon storm</button><button id="pauseBtn">â¡ Pause</button><button id="speedBtn">Â» Speed 1Ã</button><button id="resetBtn">âº New world</button></div><div class="hint">Drag to orbit Â· Pinch or scroll to zoom Â· Your world continues to evolve</div></section>
-<div class="corner">GODVERSE 3D<br>WORLD SIMULATION / EARLY BUILD</div>
+<div class="corner">GODVERSE 3D<br>WORLD SIMULATION / BUILD 0.3</div>
 <script type="module">
 import * as THREE from 'three';import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 const mount=document.getElementById('world');const scene=new THREE.Scene();scene.background=new THREE.Color(0x080d18);scene.fog=new THREE.FogExp2(0x080d18,.018);
@@ -28,46 +28,47 @@ const mat=(color,roughness=1)=>new THREE.MeshStandardMaterial({color,roughness})
 const water=new THREE.Mesh(new THREE.CircleGeometry(23,96),waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.65;world.add(water);
 function heightAt(x,z){const d=Math.sqrt(x*x+z*z);return Math.max(-.25,Math.sin(d*.43)*.55+Math.cos(x*.55)*.34+Math.sin(z*.7+x*.2)*.24+Math.max(0,1-d/15)*2.2-.55)}
 const N=90,size=34,geo=new THREE.PlaneGeometry(size,size,N,N);geo.rotateX(-Math.PI/2);const pos=geo.attributes.position;for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i);pos.setY(i,heightAt(x,z))}geo.computeVertexNormals();const land=new THREE.Mesh(geo,groundMat);land.receiveShadow=true;land.castShadow=true;world.add(land);
-const rockMat=mat(0x777d7b),trunkMat=mat(0x59402d);
-// Dense, layered broadleaf forest built with instanced meshes for mobile performance.
-const forestTrunkGeo=new THREE.CylinderGeometry(.075,.13,1,7);
-const forestBranchGeo=new THREE.CylinderGeometry(.025,.055,1,5);
-const forestLeafGeo=new THREE.IcosahedronGeometry(1,1);
-const forestTrunkMat=new THREE.MeshStandardMaterial({color:0x59402d,roughness:1});
-const forestBranchMat=new THREE.MeshStandardMaterial({color:0x65482f,roughness:1});
-const forestLeafMat=new THREE.MeshStandardMaterial({color:0x426d43,roughness:.92});
-const forestTreeCount=155, canopyPerTree=6, branchPerTree=3;
-const forestTrunks=new THREE.InstancedMesh(forestTrunkGeo,forestTrunkMat,forestTreeCount);
-const forestBranches=new THREE.InstancedMesh(forestBranchGeo,forestBranchMat,forestTreeCount*branchPerTree);
-const forestCanopies=new THREE.InstancedMesh(forestLeafGeo,forestLeafMat,forestTreeCount*canopyPerTree);
-forestTrunks.castShadow=forestBranches.castShadow=forestCanopies.castShadow=true;
-forestTrunks.receiveShadow=forestCanopies.receiveShadow=true;
-const forestDummy=new THREE.Object3D(),forestUp=new THREE.Vector3(0,1,0),forestDir=new THREE.Vector3();
-let trunkIndex=0,branchIndex=0,canopyIndex=0;
-for(let i=0;i<forestTreeCount;i++){
- const a=Math.random()*Math.PI*2,r=2.7+Math.random()*13.5,x=Math.cos(a)*r,z=Math.sin(a)*r,y=heightAt(x,z);
- if(y<.05)continue;
- const scale=.58+Math.random()*.72,height=1.45*scale;
- forestDummy.position.set(x,y+height*.5,z);forestDummy.rotation.set(0,Math.random()*.18,0);forestDummy.scale.set(scale,height,scale);forestDummy.updateMatrix();forestTrunks.setMatrixAt(trunkIndex++,forestDummy.matrix);
- for(let b=0;b<branchPerTree;b++){
-  const angle=a+b*Math.PI*2/branchPerTree+Math.random()*.35;
-  const start=new THREE.Vector3(x,y+height*.52,z),end=new THREE.Vector3(x+Math.cos(angle)*.55*scale,y+height*.9,z+Math.sin(angle)*.55*scale);
-  forestDir.subVectors(end,start);forestDummy.position.copy(start).add(end).multiplyScalar(.5);forestDummy.quaternion.setFromUnitVectors(forestUp,forestDir.clone().normalize());forestDummy.scale.set(.075*scale,forestDir.length(),.075*scale);forestDummy.updateMatrix();forestBranches.setMatrixAt(branchIndex++,forestDummy.matrix);
- }
- // Six overlapping leaf masses create a full, irregular tropical canopy.
- for(let c=0;c<canopyPerTree;c++){
-  const ring=c===0?0:1,angle=(c-1)*Math.PI*2/5+Math.random()*.25;
-  const spread=ring?(.42+Math.random()*.18)*scale:0;
-  const size=ring?(.56+Math.random()*.16)*scale:(.66+Math.random()*.14)*scale;
-  forestDummy.position.set(x+(ring?Math.cos(angle)*spread:0),y+height+(ring?(.08+Math.random()*.2)*scale:.42*scale),z+(ring?Math.sin(angle)*spread:0));
-  forestDummy.rotation.set(Math.random()*.3,Math.random()*Math.PI,Math.random()*.3);
-  forestDummy.scale.set(size*(.9+Math.random()*.25),size*(.78+Math.random()*.25),size*(.9+Math.random()*.25));forestDummy.updateMatrix();forestCanopies.setMatrixAt(canopyIndex,forestDummy.matrix);
-  const shade=new THREE.Color().setHSL(.29+Math.random()*.055,.34+Math.random()*.18,.25+Math.random()*.12);forestCanopies.setColorAt(canopyIndex,shade);canopyIndex++;
+const rockMat=mat(0x777d7b);
+// Vegetation layer: broadleaf, pine and palm trees plus instanced grass.
+const trunkGeo=new THREE.CylinderGeometry(.075,.14,1,8),branchGeo=new THREE.CylinderGeometry(.025,.06,1,6);
+const leafGeo=new THREE.IcosahedronGeometry(1,1),pineGeo=new THREE.ConeGeometry(1,1,7);
+const bladeGeo=new THREE.ConeGeometry(.075,1,4);bladeGeo.translate(0,.5,0);
+const trunkMat=new THREE.MeshStandardMaterial({color:0x59402d,roughness:1});
+const branchMat=new THREE.MeshStandardMaterial({color:0x65482f,roughness:1});
+const leafMat=new THREE.MeshStandardMaterial({color:0x477b3d,roughness:.94});
+const pineMat=new THREE.MeshStandardMaterial({color:0x28583a,roughness:1});
+const palmMat=new THREE.MeshStandardMaterial({color:0x55964b,roughness:.9,side:THREE.DoubleSide});
+const grassMat=new THREE.MeshStandardMaterial({color:0x568b43,roughness:1});
+const treeCount=185, broadCap=treeCount*5, pineCap=treeCount*3, palmCap=treeCount*6;
+const trunks=new THREE.InstancedMesh(trunkGeo,trunkMat,treeCount);
+const branches=new THREE.InstancedMesh(branchGeo,branchMat,treeCount*3);
+const broadCanopy=new THREE.InstancedMesh(leafGeo,leafMat,broadCap);
+const pineCanopy=new THREE.InstancedMesh(pineGeo,pineMat,pineCap);
+const palmLeaves=new THREE.InstancedMesh(leafGeo,palmMat,palmCap);
+const dummy=new THREE.Object3D(),up=new THREE.Vector3(0,1,0),dir=new THREE.Vector3();
+let ti=0,bi=0,li=0,pi=0,pli=0;
+for(let i=0;i<treeCount;i++){
+ const a=Math.random()*Math.PI*2,r=2.4+Math.random()*12.8,x=Math.cos(a)*r,z=Math.sin(a)*r;
+ // The terrain is a complete raised land mesh; clamp to its actual floor instead of discarding trees.
+ const y=Math.max(-.18,heightAt(x,z)),type=i%5===0?'palm':i%4===0?'pine':'broad';
+ const scale=.78+Math.random()*.8,height=(type==='palm'?2.35: type==='pine'?2.5:2.15)*scale;
+ dummy.position.set(x,y+height*.5,z);dummy.rotation.set(0,Math.random()*.3,0);dummy.scale.set(scale,height,scale);dummy.updateMatrix();trunks.setMatrixAt(ti++,dummy.matrix);
+ if(type==='broad'){
+  for(let b=0;b<3;b++){const ang=a+b*Math.PI*2/3+Math.random()*.3;const st=new THREE.Vector3(x,y+height*.5,z),en=new THREE.Vector3(x+Math.cos(ang)*.7*scale,y+height*.82,z+Math.sin(ang)*.7*scale);dir.subVectors(en,st);dummy.position.copy(st).add(en).multiplyScalar(.5);dummy.quaternion.setFromUnitVectors(up,dir.clone().normalize());dummy.scale.set(.07*scale,dir.length(),.07*scale);dummy.updateMatrix();branches.setMatrixAt(bi++,dummy.matrix)}
+  for(let c=0;c<5;c++){const ang=c*Math.PI*2/5+Math.random()*.3,rad=c===0?0:.52*scale,sz=(c===0?.78:.62)*scale;dummy.position.set(x+Math.cos(ang)*rad,y+height+(c===0?.25:.02)*scale,z+Math.sin(ang)*rad);dummy.rotation.set(Math.random()*.25,Math.random()*6,Math.random()*.25);dummy.scale.set(sz,sz*.85,sz);dummy.updateMatrix();broadCanopy.setMatrixAt(li,dummy.matrix);broadCanopy.setColorAt(li,new THREE.Color().setHSL(.28+Math.random()*.07,.42,.28+Math.random()*.1));li++}
+ }else if(type==='pine'){
+  for(let c=0;c<3;c++){const sz=(1.05-c*.23)*scale;dummy.position.set(x,y+height*(.48+c*.2),z);dummy.rotation.set(0,Math.random(),0);dummy.scale.set(sz,1.05*scale,sz);dummy.updateMatrix();pineCanopy.setMatrixAt(pi,dummy.matrix);pineCanopy.setColorAt(pi,new THREE.Color().setHSL(.36,.42,.2+Math.random()*.07));pi++}
+ }else{
+  for(let c=0;c<6;c++){const ang=c*Math.PI/3,rad=.72*scale;dummy.position.set(x+Math.cos(ang)*rad,y+height+Math.sin(ang)*.2*scale,z+Math.sin(ang)*rad);dummy.rotation.set(.35*Math.sin(ang),-ang,.75*Math.cos(ang));dummy.scale.set(.78*scale,.17*scale,.25*scale);dummy.updateMatrix();palmLeaves.setMatrixAt(pli,dummy.matrix);palmLeaves.setColorAt(pli,new THREE.Color().setHSL(.29+Math.random()*.04,.5,.32+Math.random()*.1));pli++}
  }
 }
-forestTrunks.count=trunkIndex;forestBranches.count=branchIndex;forestCanopies.count=canopyIndex;
-forestTrunks.instanceMatrix.needsUpdate=true;forestBranches.instanceMatrix.needsUpdate=true;forestCanopies.instanceMatrix.needsUpdate=true;
-world.add(forestTrunks,forestBranches,forestCanopies);
+for(const m of [trunks,branches,broadCanopy,pineCanopy,palmLeaves]){m.castShadow=true;m.receiveShadow=true;m.instanceMatrix.needsUpdate=true}
+trunks.count=ti;branches.count=bi;broadCanopy.count=li;pineCanopy.count=pi;palmLeaves.count=pli;
+world.add(trunks,branches,broadCanopy,pineCanopy,palmLeaves);
+// Dense short grass tufts spread across open ground, kept low enough not to obscure animals.
+const grassCount=900,grass=new THREE.InstancedMesh(bladeGeo,grassMat,grassCount*3);let gi=0;
+for(let i=0;i<grassCount;i++){const a=Math.random()*Math.PI*2,r=1.8+Math.random()*14.2,x=Math.cos(a)*r,z=Math.sin(a)*r,y=Math.max(-.17,heightAt(x,z));for(let b=0;b<3;b++){const ang=b*Math.PI*2/3+Math.random()*.4,h=.22+Math.random()*.24;dummy.position.set(x+Math.cos(ang)*.09,y+h*.5,z+Math.sin(ang)*.09);dummy.rotation.set(.12*Math.random(),ang,.18*Math.cos(ang));dummy.scale.set(.65,h,.65);dummy.updateMatrix();grass.setMatrixAt(gi,dummy.matrix);grass.setColorAt(gi,new THREE.Color().setHSL(.24+Math.random()*.08,.42,.27+Math.random()*.13));gi++}}
+grass.count=gi;grass.instanceMatrix.needsUpdate=true;grass.receiveShadow=true;world.add(grass);
 for(let i=0;i<28;i++){const a=Math.random()*Math.PI*2,r=3+Math.random()*13,x=Math.cos(a)*r,z=Math.sin(a)*r,y=heightAt(x,z);if(y>.05){const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.2+Math.random()*.35,0),rockMat);rock.position.set(x,y+.12,z);rock.rotation.set(Math.random(),Math.random(),Math.random());rock.castShadow=true;world.add(rock)}}
 const animalMat=[mat(0xe4c28c),mat(0xb5c8aa),mat(0xc68e70),mat(0xd5d8dc)];function addCreature(){let a=Math.random()*Math.PI*2,r=2+Math.random()*11,x=Math.cos(a)*r,z=Math.sin(a)*r,y=heightAt(x,z);if(y<.05){x*=.65;z*=.65;y=heightAt(x,z)}const g=new THREE.Group();const body=new THREE.Mesh(new THREE.SphereGeometry(.24,.0+10,8),animalMat[Math.floor(Math.random()*animalMat.length)]);body.scale.set(1.35,.8,.85);body.position.y=.36;g.add(body);const head=new THREE.Mesh(new THREE.SphereGeometry(.13,9,7),body.material);head.position.set(.22,.55,.02);g.add(head);const legs=[];for(const dx of [-.13,.13])for(const dz of [-.1,.1]){const leg=new THREE.Mesh(new THREE.CylinderGeometry(.035,.045,.28,6),body.material);leg.position.set(dx,.15,dz);g.add(leg);legs.push(leg)}g.position.set(x,y,z);g.userData={phase:Math.random()*6.28,speed:.25+Math.random()*.5,legs,age:0,hunger:Math.random()*.2,thirst:Math.random()*.2,health:1,feed:0};creatures.add(g)}
 for(let i=0;i<12;i++)addCreature();
