@@ -100,6 +100,60 @@ for(let i=0;i<treeCount;i++){
 for(const m of [trunks,branches,broadCanopy,pineCanopy,palmLeaves]){m.castShadow=true;m.receiveShadow=true;m.instanceMatrix.needsUpdate=true}
 trunks.count=ti;branches.count=bi;broadCanopy.count=li;pineCanopy.count=pi;palmLeaves.count=pli;
 world.add(trunks,branches,broadCanopy,pineCanopy,palmLeaves);
+
+/* Hero trees: individual African acacias, baobabs and woodland trees add
+   irregular silhouettes, visible branch structure and wind-responsive crowns. */
+const heroTreeCrowns=[];
+const heroBark=new THREE.MeshStandardMaterial({color:0x59402f,roughness:1});
+const heroBarkLight=new THREE.MeshStandardMaterial({color:0x75583c,roughness:1});
+const heroLeafMats=[0x526d32,0x637b3a,0x718442,0x465f2d].map(color=>new THREE.MeshStandardMaterial({color,roughness:1}));
+const heroTreeCount=44;
+for(let i=0;i<heroTreeCount;i++){
+ const a=i*2.399963,r=7+(i%11)*2.65,x=Math.cos(a)*r,z=Math.sin(a)*r,bio=biomeAt(x,z);
+ if(bio==='desert'&&i%3!==0)continue;
+ const y=Math.max(-.18,heightAt(x,z)),tree=new THREE.Group();
+ tree.position.set(x,y,z);
+ const isBaobab=bio==='savanna'&&i%9===0;
+ const isAcacia=bio==='savanna'||bio==='shore';
+ const trunkHeight=isBaobab?2.8:1.8+(i%4)*.22;
+ const trunkRadius=isBaobab?.72:.13+(i%3)*.025;
+ const trunk=new THREE.Mesh(new THREE.CylinderGeometry(trunkRadius*.72,trunkRadius*1.35,trunkHeight,11),isBaobab?heroBarkLight:heroBark);
+ trunk.position.y=trunkHeight/2;trunk.castShadow=true;trunk.receiveShadow=true;tree.add(trunk);
+ // Exposed buttress roots make larger trees sit naturally in the ground.
+ if(isBaobab||i%3===0)for(let k=0;k<4;k++){
+  const ang=k*Math.PI/2+.35,root=new THREE.Mesh(new THREE.ConeGeometry(.16,.85,7),heroBark);
+  root.position.set(Math.cos(ang)*.38,.28,Math.sin(ang)*.38);
+  root.rotation.z=Math.cos(ang)*.72;root.rotation.x=-Math.sin(ang)*.72;root.castShadow=true;tree.add(root);
+ }
+ const crownPivot=new THREE.Group();crownPivot.position.y=trunkHeight*.82;tree.add(crownPivot);
+ if(isBaobab){
+  const crown=new THREE.Mesh(new THREE.SphereGeometry(1,12,9),heroLeafMats[i%4]);
+  crown.position.y=.55;crown.scale.set(1.18,.72,1.12);crown.castShadow=true;crownPivot.add(crown);
+ }else{
+  const limbCount=isAcacia?5:4;
+  for(let k=0;k<limbCount;k++){
+   const ang=k*Math.PI*2/limbCount+(i%5)*.19;
+   const start=new THREE.Vector3(0,0,0);
+   const end=new THREE.Vector3(Math.cos(ang)*(isAcacia?1.15:.78),isAcacia?.62:.9,Math.sin(ang)*(isAcacia?1.15:.78));
+   const limbDir=end.clone().sub(start),limb=new THREE.Mesh(new THREE.CylinderGeometry(.035,.085,limbDir.length(),7),heroBark);
+   limb.position.copy(start).add(end).multiplyScalar(.5);
+   limb.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),limbDir.normalize());
+   limb.castShadow=true;crownPivot.add(limb);
+   const clusterCount=isAcacia?3:2;
+   for(let c=0;c<clusterCount;c++){
+    const leaf=new THREE.Mesh(new THREE.SphereGeometry(1,11,8),heroLeafMats[(i+k+c)%heroLeafMats.length]);
+    const spread=isAcacia?.68:.48;
+    leaf.position.set(end.x+Math.cos(ang+c*2.1)*spread*.42,end.y+(c%2)*.12,end.z+Math.sin(ang+c*2.1)*spread*.42);
+    leaf.scale.set(isAcacia?.78:.62,isAcacia?.22:.58,isAcacia?.66:.58);
+    leaf.castShadow=true;leaf.receiveShadow=true;crownPivot.add(leaf);
+   }
+  }
+ }
+ heroTreeCrowns.push({pivot:crownPivot,phase:i*.71,amount:isBaobab?.018:.035});
+ tree.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
+ world.add(tree);
+}
+
 // Dense short grass tufts spread across open ground, kept low enough not to obscure animals.
 const grassCount=1800,grass=new THREE.InstancedMesh(bladeGeo,grassMat,grassCount*3);let gi=0;
 for(let i=0;i<grassCount;i++){const a=Math.random()*Math.PI*2,r=3+Math.random()*41,x=Math.cos(a)*r,z=Math.sin(a)*r,bio=biomeAt(x,z),y=Math.max(-.3,heightAt(x,z));for(let b=0;b<3;b++){const ang=b*Math.PI*2/3+Math.random()*.4,h=.18+Math.random()*.3;dummy.position.set(x+Math.cos(ang)*.09,y+h*.5,z+Math.sin(ang)*.09);dummy.rotation.set(.12*Math.random(),ang,.18*Math.cos(ang));dummy.scale.set(.65,h,.65);dummy.updateMatrix();grass.setMatrixAt(gi,dummy.matrix);const tint=bio==='desert'?[.105,.42,.42]:bio==='woodland'?[.27,.48,.3]:bio==='wetland'?[.31,.45,.28]:bio==='highlands'?[.16,.28,.42]:bio==='shore'?[.12,.25,.52]:[.105,.38,.36];grass.setColorAt(gi,new THREE.Color().setHSL(tint[0]+Math.random()*.035,tint[1],tint[2]+Math.random()*.12));gi++}}
@@ -229,5 +283,6 @@ if(u.legs&&u.legs.length){
  else if(u.parts?.head)u.parts.head.rotation.x=0;
 }
 }
+if(dt>0){for(const t of heroTreeCrowns){t.pivot.rotation.z=Math.sin(now*.00055+t.phase)*t.amount;t.pivot.rotation.x=Math.cos(now*.00043+t.phase)*t.amount*.65}}
 if(rainDrops&&dt>0){const a=rainDrops.geometry.attributes.position;for(let i=0;i<a.count;i++){let y=a.getY(i)-dt*(weatherMode==='storm'?19:12);if(y<0)y=24;a.setY(i,y)}a.needsUpdate=true}controls.update();world.updateMatrixWorld();renderer.render(scene,camera)}}requestAnimationFrame(animate);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});updateStats();
 </script></body></html>
