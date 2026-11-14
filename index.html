@@ -229,5 +229,6 @@ if(u.sprite){
  u.sprite.position.y=u.sprite.userData.baseY+Math.abs(Math.sin(u.gait*2))*(moving ? 0.045 : 0.012);
  u.sprite.material.rotation=(u.action==='graze'||u.action==='drink') ? 0.06 : 0;
 }
+}
 if(rainDrops&&dt>0){const a=rainDrops.geometry.attributes.position;for(let i=0;i<a.count;i++){let y=a.getY(i)-dt*(weatherMode==='storm'?19:12);if(y<0)y=24;a.setY(i,y)}a.needsUpdate=true}controls.update();world.updateMatrixWorld();renderer.render(scene,camera)}requestAnimationFrame(animate);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});updateStats();
 </script></body></html>
