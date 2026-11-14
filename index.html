@@ -39,7 +39,6 @@
 <div class="corner">GODVERSE 3D<br>WORLD SIMULATION / BUILD 0.3</div>
 <script type="module">
 import * as THREE from 'three';import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const mount=document.getElementById('world');const scene=new THREE.Scene();scene.background=new THREE.Color(0xd6a36d);scene.fog=new THREE.FogExp2(0xc99a68,.008);
 const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,400);camera.position.set(0,30,43);camera.lookAt(0,0,0);
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=false;renderer.outputColorSpace=THREE.SRGBColorSpace;mount.appendChild(renderer.domElement);
@@ -112,39 +111,79 @@ for(let i=0;i<105;i++){const a=i*2.399,r=6+(i%17)*2.45,x=Math.cos(a)*r,z=Math.si
 // Rocky highland ridge and low dunes use the same terrain height field as the ground mesh.
 for(let i=0;i<18;i++){const x=17+(i%6)*3.2,z=14+Math.floor(i/6)*4.2,y=heightAt(x,z),peak=new THREE.Mesh(new THREE.DodecahedronGeometry(.8+(i%3)*.35,1),biomeRockMats[0]);peak.position.set(x,y+.28,z);peak.scale.set(1.1,1.25,.95);peak.rotation.y=i*.7;peak.castShadow=true;world.add(peak)}
 const speciesDefs=[
- {name:'Zebra',diet:'grazer',speed:.62,scale:1,modelScale:.32,url:'https://cdn.3dassets.dev/assets/6547/v1/model.glb',coat:0xe8e2d2},
- {name:'Giraffe',diet:'grazer',speed:.48,scale:1.35,modelScale:.27,url:'https://cdn.3dassets.dev/assets/6535/v1/model.glb',coat:0xd69b43},
- {name:'Elephant',diet:'grazer',speed:.30,scale:1.8,modelScale:.42,url:'https://cdn.3dassets.dev/assets/6528/v1/model.glb',coat:0x858b86},
- {name:'Lion',diet:'predator',speed:.72,scale:1.08,modelScale:.45,url:'https://cdn.3dassets.dev/assets/6531/v1/model.glb',coat:0xc99a54},
- {name:'Antelope',diet:'grazer',speed:.82,scale:.82,modelScale:.28,url:'https://cdn.3dassets.dev/assets/6549/v1/model.glb',coat:0xb9854d}
+ {name:'Zebra',diet:'grazer',speed:.62,scale:1,coat:0xe8e2d2},
+ {name:'Giraffe',diet:'grazer',speed:.48,scale:1.12,coat:0xd69b43},
+ {name:'Elephant',diet:'grazer',speed:.30,scale:1.35,coat:0x858b86},
+ {name:'Lion',diet:'predator',speed:.72,scale:1.02,coat:0xc99a54},
+ {name:'Antelope',diet:'grazer',speed:.82,scale:.92,coat:0xb9854d}
 ];
-const animalMats=speciesDefs.map(s=>new THREE.MeshStandardMaterial({color:s.coat,roughness:.88}));
-const darkAnimal=mat(0x292b28),hornMat=mat(0xd8c99e),animalLoader=new GLTFLoader(),animalModels={};
-const animalPartMap={Zebra:{legs:4,head:2,neck:3,tail:5},Giraffe:{legs:6,head:3,neck:2,tail:7},Elephant:{trunk:1,ears:2},Lion:{head:1,mane:2,tail:3,tailTip:4},Antelope:{legs:1,head:2,neck:4,tail:5}};
-function captureAnimalParts(model,species){const map=animalPartMap[species]||{},parts={};for(const [key,index] of Object.entries(map)){const part=model.children[index];if(part){parts[key]=part;part.userData.baseRotation=part.rotation.clone()}}return parts}
-const animalLoads=Promise.all(speciesDefs.map(sp=>new Promise(resolve=>animalLoader.load(sp.url,gltf=>{animalModels[sp.name]=gltf.scene;resolve(true)},undefined,()=>resolve(false)))));
-function part(g,geo,material,x,y,z,sx=1,sy=1,sz=1){const m=new THREE.Mesh(geo,material);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;g.add(m);return m}
-function addCreature(){
- const si=Math.floor(Math.random()*speciesDefs.length),sp=speciesDefs[si],g=new THREE.Group(),coat=animalMats[si],legs=[];
- const realistic=animalModels[sp.name];let model=null,parts={};
- if(realistic){model=realistic.clone(true);model.scale.setScalar(sp.modelScale*(.97+Math.random()*.06));model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material)o.material.roughness=Math.max(o.material.roughness??.75,.72)}});parts=captureAnimalParts(model,sp.name);g.add(model)}
- else{
-  const size=sp.scale;
-  part(g,new THREE.SphereGeometry(.27,12,9),coat,0,.43,0,1.55,.82,.78);
-  part(g,new THREE.SphereGeometry(.135,10,8),coat,.48,.62,0,1,.95,.9);
-  if(sp.name==='Giraffe'){part(g,new THREE.CylinderGeometry(.075,.105,.66,9),coat,.37,.83,0);part(g,new THREE.SphereGeometry(.12,9,7),coat,.45,1.2,0,1.15,1,.85);for(const z of [-.09,.09]){part(g,new THREE.CylinderGeometry(.018,.025,.16,6),hornMat,.39,1.34,z);part(g,new THREE.SphereGeometry(.035,6,5),darkAnimal,.39,1.43,z)}for(let i=0;i<7;i++)part(g,new THREE.SphereGeometry(.035,6,5),darkAnimal,-.35+i*.12,.62,((i%2)*.18)-.09)}
-  else if(sp.name==='Elephant'){part(g,new THREE.SphereGeometry(.18,9,7),coat,.52,.57,0,1.15,1.05,1.1);const trunk=part(g,new THREE.CylinderGeometry(.055,.085,.38,8),coat,.64,.35,0);trunk.rotation.z=-.28;for(const z of [-.22,.22])part(g,new THREE.SphereGeometry(.13,9,7),coat,.28,.58,z,.6,1.15,.45);for(const z of [-.12,.12]){const tusk=part(g,new THREE.ConeGeometry(.035,.22,7),hornMat,.65,.32,z);tusk.rotation.z=-1.15}}
-  else if(sp.name==='Lion'){part(g,new THREE.SphereGeometry(.23,10,8),darkAnimal,.45,.61,0,1.05,1.12,1.12);part(g,new THREE.SphereGeometry(.115,9,7),coat,.58,.62,0,1.2,.95,.9)}
-  else if(sp.name==='Zebra'){for(let i=0;i<6;i++){const stripe=part(g,new THREE.BoxGeometry(.035,.31,.72),darkAnimal,-.42+i*.15,.46,0);stripe.rotation.z=-.16}for(const z of [-.075,.075])part(g,new THREE.ConeGeometry(.035,.13,6),darkAnimal,.48,.77,z)}
-  else{for(const z of [-.09,.09]){const horn=part(g,new THREE.CylinderGeometry(.012,.028,.25,6),hornMat,.49,.82,z);horn.rotation.z=-.18}for(const z of [-.1,.1])part(g,new THREE.ConeGeometry(.045,.18,6),coat,.37,.7,z)}
-  for(const x of [-.34,.32])for(const z of [-.19,.19]){const leg=part(g,new THREE.CylinderGeometry(.045,.055,.32,7),coat,x,.18,z);legs.push(leg)}
+function makePixelAnimalTexture(species){
+ const canvas=document.createElement('canvas');canvas.width=192;canvas.height=48;
+ const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
+ const palettes={
+  Zebra:{body:'#eee8d9',dark:'#252b2c',shade:'#c9c4b8',hoof:'#302e2b'},
+  Giraffe:{body:'#e9b84f',dark:'#9b5c2d',shade:'#c98b38',hoof:'#513c2b'},
+  Elephant:{body:'#9ca6a1',dark:'#626e6d',shade:'#788784',hoof:'#454f50'},
+  Lion:{body:'#d99a45',dark:'#8b5128',shade:'#b97532',hoof:'#503d2b'},
+  Antelope:{body:'#c99355',dark:'#67472e',shade:'#9b683e',hoof:'#45382d'}
+ };
+ const p=palettes[species];
+ for(let frame=0;frame<4;frame++){
+  const ox=frame*96, R=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(ox+x*4,y*4,w*4,h*4)};
+  // soft pixel shadow
+  R(5,19,15,2,'#24251d88');R(7,18,11,1,'#24251d55');
+  const swing=[0,1,2,1][frame],legY=[0,1,0,-1][frame];
+  if(species==='Zebra'){
+   R(7,10,11,7,p.body);R(8,9,8,1,'#fff8e8');R(15,9,3,5,p.body);R(16,6,4,4,p.body);R(19,7,2,2,p.shade);R(19,8,1,1,p.dark);
+   for(const x of [8,11,14,17])R(x,10+(x%2),1,6,p.dark);
+   R(6,11,2,4,p.shade);R(5,12,2,1,p.dark);
+   for(const x of [8,10,15,17]){R(x,16+((x===10||x===17)?legY:-legY),1,4,p.dark);R(x,19+((x===10||x===17)?legY:-legY),1,1,p.hoof)}
+   R(6,10,1,4,p.dark);R(19,6,1,2,p.dark);
+  }else if(species==='Giraffe'){
+   R(6,12,11,6,p.body);R(14,5,3,10,p.body);R(15,3,4,4,p.body);R(18,4,2,2,p.shade);R(19,5,1,1,p.dark);
+   for(const [x,y] of [[7,13],[10,14],[13,12],[15,8],[15,11],[17,4]])R(x,y,1,1,p.dark);
+   R(16,2,1,2,p.dark);R(18,2,1,2,p.dark);R(5,13,2,1,p.shade);
+   for(const x of [7,9,14,16]){R(x,17+(x%2?legY:-legY),1,3,p.dark);R(x,19+(x%2?legY:-legY),1,1,p.hoof)}
+   R(5,12,1,4,p.dark);
+  }else if(species==='Elephant'){
+   R(6,9,13,10,p.body);R(4,10,4,7,p.shade);R(5,9,3,2,p.body);R(17,12,3,4,p.body);R(18,15,2,4,p.shade);R(19,18,1,1,p.dark);
+   R(19,14,1,2,'#e7ddbd');R(20,15,1,1,'#e7ddbd');R(18,10,1,1,p.dark);
+   R(7,18,2,3,p.dark);R(11,18,2,3,p.dark);R(16,18,2,3,p.dark);
+   for(const x of [7,11,16]){R(x,19+(x===11?legY:-legY),2,2,p.body);R(x,21+(x===11?legY:-legY),2,1,p.dark)}
+   R(5,13,1,4,p.dark);
+  }else if(species==='Lion'){
+   R(7,12,11,6,p.body);R(12,8,7,9,'#a9662f');R(13,7,5,2,'#b87938');R(14,9,4,6,'#c5873c');R(17,10,3,4,p.body);R(19,11,1,2,p.dark);
+   R(18,12,1,1,'#1d1b18');R(13,10,1,1,'#f3c36b');R(16,10,1,1,'#f3c36b');
+   R(6,13,2,2,p.shade);R(5,14,2,1,p.dark);
+   for(const x of [8,10,15,17]){R(x,17+(x%2?legY:-legY),1,3,p.dark);R(x,19+(x%2?legY:-legY),1,1,p.hoof)}
+   R(7,12,1,5,p.dark);
+  }else{
+   R(7,12,11,5,p.body);R(14,8,3,7,p.body);R(16,6,4,4,p.body);R(19,7,2,2,p.shade);R(20,8,1,1,p.dark);
+   R(16,3,1,4,p.dark);R(18,3,1,4,p.dark);R(15,4,1,2,p.shade);
+   R(6,12,2,3,p.shade);R(5,13,2,1,p.dark);
+   for(const x of [8,10,15,17]){R(x,16+(x%2?legY:-legY),1,4,p.dark);R(x,19+(x%2?legY:-legY),1,1,p.hoof)}
+   R(18,10,1,1,'#f4d98d');
+  }
+  // eye highlight and tiny ground glint
+  R(20,8,1,1,'#171615');R(21,9,1,1,'#fff0c8');
  }
+ const texture=new THREE.CanvasTexture(canvas);texture.magFilter=THREE.NearestFilter;texture.minFilter=THREE.NearestFilter;texture.generateMipmaps=false;texture.colorSpace=THREE.SRGBColorSpace;texture.repeat.set(.25,1);texture.offset.set(0,0);texture.needsUpdate=true;return texture;
+}
+const pixelAnimalTextures=Object.fromEntries(speciesDefs.map(sp=>[sp.name,makePixelAnimalTexture(sp.name)]));
+function addCreature(){
+ const si=Math.floor(Math.random()*speciesDefs.length),sp=speciesDefs[si],g=new THREE.Group();
+ const texture=pixelAnimalTextures[sp.name].clone();texture.needsUpdate=true;
+ const material=new THREE.SpriteMaterial({map:texture,transparent:true,alphaTest:.08,depthWrite:true});
+ const sprite=new THREE.Sprite(material);
+ const sizes={Zebra:[1.45,1.45],Giraffe:[1.4,1.85],Elephant:[1.8,1.65],Lion:[1.5,1.5],Antelope:[1.35,1.5]};
+ sprite.scale.set(sizes[sp.name][0]*sp.scale,sizes[sp.name][1]*sp.scale,1);
+ sprite.position.y=sizes[sp.name][1]*sp.scale*.5;
+ g.add(sprite);
  g.position.set((Math.random()-.5)*13,0,(Math.random()-.5)*13);g.position.y=heightAt(g.position.x,g.position.z);
- if(!realistic)g.scale.setScalar(sp.scale);
- g.userData={species:sp.name,diet:sp.diet,phase:Math.random()*6.28,speed:sp.speed,legs,model,parts,animTime:Math.random()*8,age:0,hunger:Math.random()*.2,thirst:Math.random()*.2,health:1,feed:0,action:'wander',target:new THREE.Vector3(g.position.x+(Math.random()-.5)*5,0,g.position.z+(Math.random()-.5)*5),think:Math.random()*3,walk:0,gait:0,moveSpeed:0,heading:g.rotation.y,rest:0,turnBias:(Math.random()-.5)*.12};
+ g.userData={species:sp.name,diet:sp.diet,phase:Math.random()*6.28,speed:sp.speed,legs:[],model:null,parts:{},sprite,texture,animTime:Math.random()*8,age:0,hunger:Math.random()*.2,thirst:Math.random()*.2,health:1,feed:0,action:'wander',target:new THREE.Vector3(g.position.x+(Math.random()-.5)*5,0,g.position.z+(Math.random()-.5)*5),think:Math.random()*3,walk:0,gait:0,moveSpeed:0,heading:g.rotation.y,rest:0,turnBias:(Math.random()-.5)*.12};
  creatures.add(g)
 }
-for(let i=0;i<20;i++)addCreature();animalLoads.then(()=>{notify('Safari models are ready for new arrivals.')}).catch(()=>{});
+for(let i=0;i<20;i++)addCreature();
 const stars=new THREE.Points(new THREE.BufferGeometry(),new THREE.PointsMaterial({color:0xa9c6e8,size:.08,transparent:true,opacity:.65}));const starPos=[];for(let i=0;i<500;i++)starPos.push((Math.random()-.5)*150,20+Math.random()*65,(Math.random()-.5)*150);stars.geometry.setAttribute('position',new THREE.Float32BufferAttribute(starPos,3));scene.add(stars);
 let day=1,weatherMode='clear',rainDrops=null,paused=false,simSpeed=1,simTick=0,lastPopulation=12;const healthyEl=document.getElementById('healthy'),hungryEl=document.getElementById('hungry'),trendEl=document.getElementById('trend');const ageEl=document.getElementById('age'),lifeEl=document.getElementById('life'),climateEl=document.getElementById('climate'),stateEl=document.getElementById('state'),toast=document.getElementById('toast');function notify(t){toast.textContent=t;toast.classList.add('show');clearTimeout(notify.timer);notify.timer=setTimeout(()=>toast.classList.remove('show'),1900)}function updateStats(){const list=creatures.children;const counts={Zebra:0,Giraffe:0,Elephant:0,Lion:0,Antelope:0};for(const animal of list){if(counts[animal.userData.species]!==undefined)counts[animal.userData.species]++}const speciesList=document.getElementById('speciesList');if(speciesList)speciesList.innerHTML=Object.entries(counts).map(([name,count])=>'<div><span>'+({Zebra:'🦓',Giraffe:'🦒',Elephant:'🐘',Lion:'🦁',Antelope:'🦌'}[name])+' '+name+'</span><b>'+count+'</b></div>').join('');const healthy=list.filter(c=>c.userData.health>.45).length;const hungry=list.filter(c=>c.userData.hunger>.65).length;ageEl.textContent='Day '+String(day).padStart(3,'0');lifeEl.textContent=list.length;healthyEl.textContent=healthy;hungryEl.textContent=hungry;trendEl.textContent=list.length>lastPopulation?'Growing':list.length<lastPopulation?'Falling':'Stable';lastPopulation=list.length;climateEl.textContent=weatherMode==='rain'?'Rainy':weatherMode==='storm'?'Stormy':'Temperate';stateEl.textContent=weatherMode==='storm'?'Wild':list.length>24?'Thriving':hungry>list.length*.6?'Stressed':'Peaceful';const wn=document.getElementById('weatherName'),wd=document.getElementById('weatherDescription');if(wn){wn.textContent=weatherMode==='storm'?'Thunderstorm':weatherMode==='rain'?'Rainfall':'Clear skies';wd.textContent=weatherMode==='storm'?'Heavy rain and dark skies':weatherMode==='rain'?'Rain is falling over the biome':'Warm savanna conditions'}const ss=document.getElementById('simStatus');if(ss)ss.textContent=(paused?'Paused':'Running')+' • '+simSpeed+'×';const sc=document.getElementById('simClock');if(sc)sc.textContent=simSpeed+'× SPEED'}
 document.getElementById('lifeBtn').onclick=()=>{for(let i=0;i<3;i++)addCreature();updateStats();notify('New life has entered your world.')};function setRain(mode){weatherMode=mode;weather.clear();if(mode!=='clear'){const count=mode==='storm'?1600:900;const p=new Float32Array(count*3);for(let i=0;i<count;i++){p[i*3]=(Math.random()-.5)*45;p[i*3+1]=Math.random()*24;p[i*3+2]=(Math.random()-.5)*45}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));rainDrops=new THREE.Points(g,new THREE.PointsMaterial({color:mode==='storm'?0x9cb6ce:0x91b9d4,size:.075,transparent:true,opacity:.7}));weather.add(rainDrops);scene.fog.color.set(mode==='storm'?0x111a2b:0x172838);scene.fog.density=mode==='storm'?.032:.024}else{rainDrops=null;scene.fog.color.set(0xc99a68);scene.fog.density=.008}updateStats()}
@@ -182,5 +221,13 @@ if(moving&&dist<.7){u.moveSpeed*=.86}
 if(moving){u.walk+=dt*stride*5;u.gait+=dt*stride*(u.action==='flee'||u.action==='hunt'?10:7)}
 else{u.moveSpeed*=Math.max(0,1-dt*2.4);if(u.action==='drink')u.thirst=Math.max(0,u.thirst-dt*.22);if(u.action==='graze'){const node=foodNodes.find(n=>n.regrow<=0&&Math.hypot(n.x-c.position.x,n.z-c.position.z)<.85);if(node){u.hunger=Math.max(0,u.hunger-dt*.25);if(u.hunger<.12)node.regrow=28}}}
 }
-u.animTime+=dt;const x=c.position.x,z=c.position.z;c.position.y=heightAt(x,z);u.legs.forEach((leg,i)=>leg.rotation.x=Math.sin(u.gait+(i%2)*Math.PI)*.08*(moving?1:.04));if(u.model){const breathe=Math.sin(u.animTime*2.1+u.phase)*.009,stepBob=moving?Math.abs(Math.sin(u.gait*2))*.045:0;u.model.position.y=stepBob+breathe;u.model.rotation.z=Math.sin(u.animTime*1.7+u.phase)*.009+(moving?Math.sin(u.gait)*.018:0);u.model.rotation.x=(moving?Math.sin(u.gait*2)*.025:0)+(u.action==='graze'?.065:u.action==='drink'?.045:0);const p=u.parts||{},swing=Math.sin(u.gait+u.phase),idle=Math.sin(u.animTime*1.4+u.phase);const pose=(part,rx=0,ry=0,rz=0)=>{if(part){const b=part.userData.baseRotation||new THREE.Euler();part.rotation.set(b.x+rx,b.y+ry,b.z+rz)}};pose(p.legs,moving?swing*.25:idle*.008);pose(p.head,(u.action==='graze'?.24:u.action==='drink'?.18:0)+Math.sin(u.animTime*1.3+u.phase)*.025,Math.sin(u.animTime*.8+u.phase)*.035,0);pose(p.neck,Math.sin(u.animTime*.9+u.phase)*.018+(u.action==='graze'?.06:0),0,Math.sin(u.animTime*.7+u.phase)*.012);pose(p.tail,Math.sin(u.animTime*2.8+u.phase)*.12,Math.sin(u.animTime*3.2+u.phase)*.16,Math.sin(u.animTime*2.2+u.phase)*.035);pose(p.tailTip,Math.sin(u.animTime*3.2+u.phase)*.18,Math.sin(u.animTime*3.8+u.phase)*.12,0);pose(p.trunk,Math.sin(u.animTime*2.4+u.phase)*.13+(u.action==='drink'?.22:0),Math.sin(u.animTime*1.7+u.phase)*.08,Math.sin(u.animTime*2+u.phase)*.06);pose(p.ears,Math.sin(u.animTime*2.1+u.phase)*.045,0,Math.sin(u.animTime*1.8+u.phase)*.035);pose(p.mane,Math.sin(u.animTime*1.2+u.phase)*.008)}}}if(rainDrops&&dt>0){const a=rainDrops.geometry.attributes.position;for(let i=0;i<a.count;i++){let y=a.getY(i)-dt*(weatherMode==='storm'?19:12);if(y<0)y=24;a.setY(i,y)}a.needsUpdate=true}controls.update();world.updateMatrixWorld();renderer.render(scene,camera)}requestAnimationFrame(animate);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});updateStats();
+u.animTime+=dt;const x=c.position.x,z=c.position.z;c.position.y=heightAt(x,z);
+if(u.sprite){
+ const frame=moving?Math.floor(u.gait*1.7)%4:(Math.floor(u.animTime*1.1+u.phase)%2);
+ u.texture.offset.x=frame*.25;
+ u.sprite.scale.x=Math.abs(u.sprite.scale.x)*(Math.sin(c.rotation.y)>=0?1:-1);
+ u.sprite.position.y=(u.species==='Giraffe'?.91:u.species==='Elephant'?.82:.68)+Math.abs(Math.sin(u.gait*2))*(moving?.045:.012);
+ u.sprite.material.rotation=(u.action==='graze'||u.action==='drink')?.06:0;
+}
+if(rainDrops&&dt>0){const a=rainDrops.geometry.attributes.position;for(let i=0;i<a.count;i++){let y=a.getY(i)-dt*(weatherMode==='storm'?19:12);if(y<0)y=24;a.setY(i,y)}a.needsUpdate=true}controls.update();world.updateMatrixWorld();renderer.render(scene,camera)}requestAnimationFrame(animate);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});updateStats();
 </script></body></html>
