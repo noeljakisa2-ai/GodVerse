@@ -258,59 +258,50 @@ function animalMat(color,roughness=0.94){
  return new THREE.MeshStandardMaterial({color,map:animalSurfaceTexture,bumpMap:animalBumpTexture,bumpScale:.035,roughness,metalness:0});
 }
 function buildAnimalModel(species,scale){
- const root=new THREE.Group(),parts={legs:[],tail:null,head:null};
- const palettes={
-  Zebra:{body:0xe9e5d8,dark:0x202326,hoof:0x282522},
-  Giraffe:{body:0xd69a3e,dark:0x754324,hoof:0x49362a},
-  Elephant:{body:0x858d89,dark:0x626d69,hoof:0x555d5a},
-  Lion:{body:0xc99149,dark:0x81502d,hoof:0x49382a},
-  Antelope:{body:0xb9844c,dark:0x65452d,hoof:0x49372a}
- };
- const p=palettes[species],bodyMat=animalMat(p.body),darkMat=animalMat(p.dark),hoofMat=animalMat(p.hoof),cream=animalMat(0xe8d8b8),black=animalMat(0x211d19);
- const sphere=new THREE.SphereGeometry(1,16,12);
+ const root=new THREE.Group(),parts={legs:[],knees:[],tail:null,head:null};
+ const palettes={Zebra:{body:0xe8e2d4,dark:0x202326,hoof:0x282522,muzzle:0x302c28},Giraffe:{body:0xd69a3e,dark:0x754324,hoof:0x49362a,muzzle:0x4b3020},Elephant:{body:0x858d89,dark:0x626d69,hoof:0x555d5a,muzzle:0x737c78},Lion:{body:0xc99149,dark:0x81502d,hoof:0x49382a,muzzle:0x4b382b},Antelope:{body:0xb9844c,dark:0x65452d,hoof:0x49372a,muzzle:0x3b2b20}};
+ const p=palettes[species],body=animalMat(p.body),dark=animalMat(p.dark),hoof=animalMat(p.hoof),muzzle=animalMat(p.muzzle),cream=animalMat(0xe8d8b8),black=animalMat(0x171513),sphere=new THREE.SphereGeometry(1,28,20);
  function blob(parent,material,pos,size){const m=new THREE.Mesh(sphere,material);m.position.set(...pos);m.scale.set(...size);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
- // Deep torso, shoulder and rump give each animal a solid three-dimensional silhouette.
- blob(root,bodyMat,[0,.92,0],[.94,.48,.43]);
- blob(root,bodyMat,[0,1.02,.42],[.47,.48,.43]);
- blob(root,bodyMat,[0,.98,-.48],[.53,.46,.42]);
- const legXs=[-.57,.57],legZs=[-.29,.29];
- for(let x of legXs)for(let z of legZs){
-  const pivot=new THREE.Group();pivot.position.set(x,.82,z);root.add(pivot);
-  const upper=new THREE.Mesh(new THREE.CapsuleGeometry(species==='Elephant'?.105:.065,.32,4,8),bodyMat);upper.position.y=-.23;upper.castShadow=true;pivot.add(upper);
-  const lower=new THREE.Mesh(new THREE.CapsuleGeometry(species==='Elephant'?.09:.045,.28,4,8),darkMat);lower.position.set(0,-.53,.015);lower.castShadow=true;pivot.add(lower);
-  const hoof=new THREE.Mesh(new THREE.SphereGeometry(species==='Elephant'?.13:.085,10,8),hoofMat);hoof.scale.set(1,.55,1.2);hoof.position.set(0,-.72,.035);hoof.castShadow=true;pivot.add(hoof);
-  parts.legs.push(pivot);
+ function tube(parent,points,radius,material,segments=18){const curve=new THREE.CatmullRomCurve3(points.map(v=>new THREE.Vector3(...v)));const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,segments,radius,8,false),material);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh}
+ blob(root,body,[0,species==='Elephant'?1.05:.98,0],species==='Elephant'?[1.02,.78,.72]:species==='Lion'?[.92,.58,.55]:[.98,.49,.43]);
+ blob(root,body,[0,1.02,.36],species==='Elephant'?[.78,.62,.54]:species==='Lion'?[.58,.53,.48]:[.55,.47,.42]);
+ blob(root,body,[0,.94,-.48],species==='Elephant'?[.62,.65,.48]:[.57,.46,.4]);
+ const legXs=species==='Elephant'?[-.62,.62]:[-.56,.56];
+ for(const x of legXs)for(const z of [-.34,.34]){
+  const hip=new THREE.Group();hip.position.set(x,species==='Elephant'?.92:.82,z);root.add(hip);
+  const upperLen=species==='Elephant'?.43:species==='Giraffe'?.43:.36,upperR=species==='Elephant'?.19:species==='Lion'?.115:.09;
+  const upper=new THREE.Mesh(new THREE.CapsuleGeometry(upperR,upperLen,6,12),body);upper.position.y=-upperLen*.42;upper.castShadow=true;hip.add(upper);
+  const knee=new THREE.Group();knee.position.y=-upperLen*.82;hip.add(knee);
+  const lowerLen=species==='Elephant'?.34:species==='Giraffe'?.48:species==='Antelope'?.48:.39,lowerR=species==='Elephant'?.15:species==='Antelope'?.055:.07;
+  const lower=new THREE.Mesh(new THREE.CapsuleGeometry(lowerR,lowerLen,6,10),species==='Elephant'?body:dark);lower.position.y=-lowerLen*.43;lower.castShadow=true;knee.add(lower);
+  blob(knee,hoof,[0,-lowerLen*.86,.07],species==='Elephant'?[.19,.13,.23]:species==='Lion'?[.13,.105,.19]:[.095,.075,.16]);
+  if(species==='Elephant')for(let toe=-1;toe<=1;toe++)blob(knee,cream,[toe*.075,-lowerLen*.9,.235],[.035,.045,.035]);
+  parts.legs.push(hip);parts.knees.push(knee);
  }
- // Species-specific neck, head and face proportions.
  if(species==='Giraffe'){
-  const neck=new THREE.Mesh(new THREE.CylinderGeometry(.13,.22,1.05,12),bodyMat);neck.position.set(0,1.58,.48);neck.rotation.x=-.18;neck.castShadow=true;root.add(neck);
-  blob(root,bodyMat,[0,2.12,.58],[.22,.28,.25]);
-  for(let side of [-1,1])for(let i=0;i<18;i++){const y=1.12+Math.random()*.78,x=(Math.random()-.5)*.42,z=side*(.37+Math.random()*.035);const spot=blob(root,darkMat,[x,y,z],[.075,.095,.026]);spot.rotation.z=(Math.random()-.5)*.7}
-  for(const x of [-.11,.11]){const oss=new THREE.Mesh(new THREE.CylinderGeometry(.025,.035,.15,7),darkMat);oss.position.set(x,2.42,.58);root.add(oss);blob(root,cream,[x,2.5,.58],[.045,.05,.045])}
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(.115,.245,1.35,20,8),body);neck.position.set(0,1.72,.43);neck.rotation.x=-.13;neck.castShadow=true;root.add(neck);blob(root,body,[0,1.22,.46],[.28,.38,.3]);
+  for(const side of [-1,1])for(let i=0;i<34;i++){const y=1.1+Math.random()*.98,x=(Math.random()-.5)*.48,z=side*(.365+Math.random()*.018),patch=blob(root,dark,[x,y,z],[.052+Math.random()*.035,.065+Math.random()*.035,.018]);patch.rotation.z=(Math.random()-.5)*.8}
+  const head=new THREE.Group();head.position.set(0,2.25,.56);root.add(head);parts.head=head;blob(head,body,[0,.02,.12],[.23,.25,.34]);blob(head,body,[0,-.09,.37],[.17,.13,.23]);
+  for(const x of [-.12,.12]){blob(head,black,[x,.1,.34],[.035,.045,.027]);const oss=new THREE.Mesh(new THREE.CylinderGeometry(.025,.04,.17,8),dark);oss.position.set(x,.27,.02);head.add(oss);blob(head,cream,[x,.37,.02],[.045,.055,.045])}
  }else if(species==='Elephant'){
-  blob(root,bodyMat,[0,1.45,.48],[.43,.58,.38]);blob(root,bodyMat,[-.36,1.48,.48],[.32,.4,.12]);blob(root,bodyMat,[.36,1.48,.48],[.32,.4,.12]);
-  const trunk=new THREE.Mesh(new THREE.CatmullRomCurve3([new THREE.Vector3(0,1.55,.78),new THREE.Vector3(0,1.15,.98),new THREE.Vector3(0,.72,1.02),new THREE.Vector3(0,.62,.88)]).getPoints(20).length?new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0,1.55,.78),new THREE.Vector3(0,1.15,.98),new THREE.Vector3(0,.72,1.02),new THREE.Vector3(0,.62,.88)]),20,.105,8,false):sphere,bodyMat);root.add(trunk);
-  for(const x of [-.35,.35]){const tusk=new THREE.Mesh(new THREE.ConeGeometry(.07,.34,9),cream);tusk.position.set(x*.72,1.12,.92);tusk.rotation.x=-.65;root.add(tusk)}
+  blob(root,body,[0,1.38,.47],[.53,.56,.43]);
+  for(const side of [-1,1]){const ear=blob(root,body,[side*.48,1.48,.43],[.43,.53,.12]);ear.rotation.z=side*.16;blob(root,dark,[side*.5,1.48,.535],[.31,.39,.035])}
+  const head=new THREE.Group();head.position.set(0,1.58,.72);root.add(head);parts.head=head;blob(head,body,[0,0,.05],[.39,.43,.38]);
+  for(const side of [-1,1]){const tusk=new THREE.Mesh(new THREE.ConeGeometry(.075,.42,12),cream);tusk.position.set(side*.25,-.2,.43);tusk.rotation.x=-.72;tusk.rotation.z=side*.13;head.add(tusk)}
+  tube(head,[[0,-.18,.35],[0,-.48,.57],[.015,-.83,.63],[.02,-1.02,.48]],.115,body,22);
  }else if(species==='Lion'){
-  blob(root,darkMat,[0,1.38,.53],[.57,.59,.48]);blob(root,bodyMat,[0,1.52,.88],[.28,.25,.26]);
-  for(const x of [-.17,.17])blob(root,bodyMat,[x,1.63,.99],[.13,.12,.13]);
+  blob(root,animalMat(0x704321),[0,1.43,.54],[.62,.65,.54]);
+  const head=new THREE.Group();head.position.set(0,1.53,.91);root.add(head);parts.head=head;blob(head,body,[0,0,.04],[.34,.34,.38]);blob(head,muzzle,[0,-.18,.35],[.23,.16,.24]);
+  for(const side of [-1,1]){blob(head,body,[side*.23,.2,.02],[.12,.13,.12]);blob(head,black,[side*.13,.06,.34],[.035,.045,.03]);blob(head,cream,[side*.11,-.12,.5],[.075,.045,.08])}blob(head,black,[0,-.1,.56],[.075,.05,.05]);
  }else{
-  const neck=new THREE.Mesh(new THREE.CylinderGeometry(species==='Zebra'?.19:.14,.25,.55,12),bodyMat);neck.position.set(0,1.22,.48);neck.rotation.x=-.38;neck.castShadow=true;root.add(neck);
-  blob(root,bodyMat,[0,1.48,.72],[.25,.24,.3]);
-  for(const x of [-.2,.2]){const ear=blob(root,bodyMat,[x,1.63,.62],[.075,.18,.07]);ear.rotation.z=x<0?-.45:.45}
-  if(species==='Antelope')for(const x of [-.11,.11]){const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(x,1.66,.7),new THREE.Vector3(x*1.3,1.95,.72),new THREE.Vector3(x*1.7,2.18,.78)]);const horn=new THREE.Mesh(new THREE.TubeGeometry(curve,12,.027,6,false),darkMat);root.add(horn)}
+  const neckLen=species==='Zebra'?.62:.55,neck=new THREE.Mesh(new THREE.CylinderGeometry(species==='Zebra'?.16:.12,.27,neckLen,18,6),body);neck.position.set(0,1.27,.43);neck.rotation.x=-.42;neck.castShadow=true;root.add(neck);
+  const head=new THREE.Group();head.position.set(0,1.52,.72);root.add(head);parts.head=head;blob(head,body,[0,.02,.12],species==='Zebra'?[.23,.25,.34]:[.19,.22,.31]);blob(head,muzzle,[0,-.09,.37],species==='Zebra'?[.17,.13,.23]:[.13,.11,.22]);
+  for(const side of [-1,1]){const ear=blob(head,body,[side*.22,.2,.02],[species==='Antelope'?.075:.09,species==='Antelope'?.29:.19,.065]);ear.rotation.z=side*.48;blob(head,black,[side*.13,.08,.34],[.032,.04,.026])}
+  if(species==='Antelope')for(const side of [-1,1])tube(head,[[side*.11,.22,.02],[side*.16,.49,.02],[side*.22,.73,.11],[side*.19,.96,.19]],.032,dark,20);
  }
- // Eyes and muzzle make the head readable from the game camera.
- const eyeY=species==='Giraffe'?2.15:species==='Elephant'?1.53:species==='Lion'?1.48:1.52;
- const eyeZ=species==='Giraffe'?.79:species==='Elephant'?.78:.94;
- for(const x of [-.13,.13])blob(root,black,[x,eyeY,eyeZ],[.035,.04,.025]);
- blob(root,species==='Elephant'?bodyMat:darkMat,[0,species==='Giraffe'?2.02:species==='Elephant'?1.36:1.36,species==='Elephant'?.78:species==='Giraffe'?.83:1.0],[.13,.09,.12]);
- const tailCurve=new THREE.CatmullRomCurve3([new THREE.Vector3(0,.98,-.78),new THREE.Vector3(0,.8,-1.05),new THREE.Vector3(0,.55,-1.22)]);
- parts.tail=new THREE.Mesh(new THREE.TubeGeometry(tailCurve,10,.025,6,false),darkMat);root.add(parts.tail);
- if(species==='Zebra'){
-  // Thin curved dark bands wrap the flanks instead of using a flat sprite texture.
-  for(let side of [-1,1])for(let i=0;i<7;i++){const z=-.62+i*.19;const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(-.55,.98,z),new THREE.Vector3(-.48,1.25,z+.035),new THREE.Vector3(-.2,1.36,z+.05),new THREE.Vector3(.08,1.38,z+.05),new THREE.Vector3(.42,1.25,z+.035),new THREE.Vector3(.55,.98,z)]);const stripe=new THREE.Mesh(new THREE.TubeGeometry(curve,12,.025,5,false),darkMat);stripe.position.x=side*.005;root.add(stripe)}
- }
+ if(species==='Zebra'){for(const side of [-1,1])for(let i=0;i<11;i++){const z=-.68+i*.125;tube(root,[[-.45,1.0,z],[-.4,1.24,z+.025],[-.2,1.39,z+.035],[.08,1.4,z+.035],[.38,1.25,z+.02],[.46,1.0,z]],.022,dark,12)}const mane=blob(root,dark,[0,1.48,.35],[.09,.37,.22]);mane.rotation.x=-.35}
+ parts.tail=tube(root,[[0,.98,-.72],[.02,.78,-1.02],[.08,.55,-1.22],[.08,.42,-1.32]],species==='Lion'?.045:.027,dark,16);
+ if(species==='Lion')blob(root,dark,[.08,.4,-1.34],[.09,.12,.12]);
  root.scale.setScalar(scale);return {root,parts};
 }
 function addCreature(){
@@ -363,8 +354,8 @@ if(u.legs&&u.legs.length){
  const gait=Math.sin(u.gait),idle=Math.sin(u.animTime*1.4+u.phase)*.025;
  u.legs.forEach((leg,i)=>{const phase=(i===0||i===3)?0:Math.PI;leg.rotation.x=moving?Math.sin(u.gait+phase)*(u.action==='flee'?0.72:.42):idle});
  if(u.parts?.tail)u.parts.tail.rotation.y=Math.sin(u.animTime*2.1+u.phase)*.13;
- if(u.action==='graze'||u.action==='drink'){if(u.parts?.head)u.parts.head.rotation.x=.12}
- else if(u.parts?.head)u.parts.head.rotation.x=0;
+ if(u.parts?.knees)u.parts.knees.forEach((k,i)=>{k.rotation.x=moving?Math.max(0,Math.sin(u.gait+(i===0||i===3?0:Math.PI)))*.34:0});
+ if(u.parts?.head){const lookDown=(u.action==='graze'||u.action==='drink')?.22:0;u.parts.head.rotation.x+=(lookDown-u.parts.head.rotation.x)*Math.min(1,dt*2.5)}
 }
 }
 if(dt>0){for(const t of heroTreeCrowns){t.pivot.rotation.z=Math.sin(now*.00055+t.phase)*t.amount;t.pivot.rotation.x=Math.cos(now*.00043+t.phase)*t.amount*.65}}
