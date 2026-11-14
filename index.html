@@ -178,9 +178,38 @@ for(let i=0;i<heroTreeCount;i++){
   leafBatch.count=leafIndex;leafBatch.instanceMatrix.needsUpdate=true;crownPivot.add(leafBatch);
  }
  heroTreeCrowns.push({pivot:crownPivot,phase:i*.71,amount:isBaobab?.012:.028});
+ // Saplings, young trees, mature crowns and old giants share the same species shapes.
+ const ageScale=[.62,.78,.9,1,1,1.12,1.22][i%7];tree.scale.setScalar(ageScale);
  tree.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
  world.add(tree);
 }
+// Forest-floor detail: scattered fallen leaves and a few weathered dead branches.
+const litterGeo=new THREE.SphereGeometry(1,6,4);
+const litterMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1});
+const litter=new THREE.InstancedMesh(litterGeo,litterMat,420);
+const litterDummy=new THREE.Object3D(),litterColors=[0x76613a,0x9a7845,0x5c6032,0xb08b50,0x67513a];
+for(let n=0;n<420;n++){
+ const a=Math.random()*Math.PI*2,r=1.1+Math.random()*2.8;
+ const treeIndex=n%heroTreeCount,ta=treeIndex*2.399963,tr=7+(treeIndex%11)*2.65;
+ const x=Math.cos(ta)*tr+Math.cos(a)*r,z=Math.sin(ta)*tr+Math.sin(a)*r;
+ litterDummy.position.set(x,Math.max(-.12,heightAt(x,z))+.035,z);
+ litterDummy.rotation.set(-Math.PI/2+(Math.random()-.5)*.3,Math.random()*Math.PI,(Math.random()-.5)*.25);
+ const s=.035+Math.random()*.045;litterDummy.scale.set(s*1.8,.012,s);litterDummy.updateMatrix();
+ litter.setMatrixAt(n,litterDummy.matrix);litter.setColorAt(n,new THREE.Color(litterColors[n%litterColors.length]));
+}
+litter.instanceMatrix.needsUpdate=true;litter.frustumCulled=false;world.add(litter);
+const deadwoodGeo=new THREE.CylinderGeometry(.025,.055,1,5);
+const deadwoodMat=new THREE.MeshStandardMaterial({color:0x493b2b,roughness:1});
+const deadwood=new THREE.InstancedMesh(deadwoodGeo,deadwoodMat,26);
+for(let n=0;n<26;n++){
+ const a=n*2.399963,r=5+(n%9)*3.4,x=Math.cos(a)*r,z=Math.sin(a)*r;
+ const start=new THREE.Vector3(x,Math.max(-.12,heightAt(x,z))+.09,z);
+ const end=start.clone().add(new THREE.Vector3((Math.random()-.5)*1.8,.04,(Math.random()-.5)*1.8));
+ const d=end.clone().sub(start);litterDummy.position.copy(start).add(end).multiplyScalar(.5);
+ litterDummy.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());
+ litterDummy.scale.set(1,d.length(),1);litterDummy.updateMatrix();deadwood.setMatrixAt(n,litterDummy.matrix);
+}
+deadwood.instanceMatrix.needsUpdate=true;world.add(deadwood);
 // Dense short grass tufts spread across open ground, kept low enough not to obscure animals.
 const grassCount=1800,grass=new THREE.InstancedMesh(bladeGeo,grassMat,grassCount*3);let gi=0;
 for(let i=0;i<grassCount;i++){const a=Math.random()*Math.PI*2,r=3+Math.random()*41,x=Math.cos(a)*r,z=Math.sin(a)*r,bio=biomeAt(x,z),y=Math.max(-.3,heightAt(x,z));for(let b=0;b<3;b++){const ang=b*Math.PI*2/3+Math.random()*.4,h=.18+Math.random()*.3;dummy.position.set(x+Math.cos(ang)*.09,y+h*.5,z+Math.sin(ang)*.09);dummy.rotation.set(.12*Math.random(),ang,.18*Math.cos(ang));dummy.scale.set(.65,h,.65);dummy.updateMatrix();grass.setMatrixAt(gi,dummy.matrix);const tint=bio==='desert'?[.105,.42,.42]:bio==='woodland'?[.27,.48,.3]:bio==='wetland'?[.31,.45,.28]:bio==='highlands'?[.16,.28,.42]:bio==='shore'?[.12,.25,.52]:[.105,.38,.36];grass.setColorAt(gi,new THREE.Color().setHSL(tint[0]+Math.random()*.035,tint[1],tint[2]+Math.random()*.12));gi++}}
