@@ -150,29 +150,32 @@ for(let i=0;i<heroTreeCount;i++){
    leaf.scale.set(.55+Math.random()*.35,.34+Math.random()*.22,.5+Math.random()*.3);leaf.castShadow=true;crownPivot.add(leaf);
   }
  }else{
-  const limbCount=isAcacia?5:4;
+  const limbCount=isAcacia?5:4,twigsPerLimb=isAcacia?3:2,leafN=isAcacia?7:5;
+  // Batch every leaf on this tree into one draw call instead of hundreds of tiny meshes.
+  const leafBatch=new THREE.InstancedMesh(leafShape,new THREE.MeshStandardMaterial({color:0xffffff,roughness:1}),limbCount*twigsPerLimb*leafN);
+  leafBatch.frustumCulled=false;leafBatch.castShadow=false;leafBatch.receiveShadow=false;
+  const leafDummy=new THREE.Object3D();let leafIndex=0;
   for(let k=0;k<limbCount;k++){
    const ang=k*Math.PI*2/limbCount+(i%5)*.19;
    const end=new THREE.Vector3(Math.cos(ang)*(isAcacia?1.3:.85),isAcacia?.62:.92,Math.sin(ang)*(isAcacia?1.3:.85));
-   const limbDir=end.clone().sub(new THREE.Vector3(0,0,0));
+   const limbDir=end.clone();
    const limb=new THREE.Mesh(new THREE.CylinderGeometry(.018,.075,limbDir.length(),7),heroBark);
    limb.position.copy(end).multiplyScalar(.5);limb.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),limbDir.normalize());limb.castShadow=true;crownPivot.add(limb);
-   const twigs=isAcacia?3:2;
-   for(let c=0;c<twigs;c++){
+   for(let c=0;c<twigsPerLimb;c++){
     const t=.48+c*.23,base=new THREE.Vector3(end.x*t,end.y*t,end.z*t);
     const twigEnd=base.clone().add(new THREE.Vector3(Math.cos(ang+c*2.4)*.38,.18,Math.sin(ang+c*2.4)*.38));
     const twigDir=twigEnd.clone().sub(base),twig=new THREE.Mesh(new THREE.CylinderGeometry(.009,.026,twigDir.length(),5),heroBark);
     twig.position.copy(base).add(twigEnd).multiplyScalar(.5);twig.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),twigDir.normalize());crownPivot.add(twig);
-    const cluster=new THREE.Group();cluster.position.copy(twigEnd);crownPivot.add(cluster);
-    const leafN=isAcacia?7:5;
     for(let q=0;q<leafN;q++){
-     const leaf=new THREE.Mesh(leafShape,heroLeafMats[(i+k+c+q)%heroLeafMats.length]);
-     leaf.position.set((Math.random()-.5)*.62,(Math.random()-.5)*.25,(Math.random()-.5)*.56);
-     leaf.scale.set(isAcacia?.28:.34,isAcacia?.12:.28,isAcacia?.24:.3);
-     leaf.rotation.y=Math.random()*Math.PI;leaf.castShadow=true;leaf.receiveShadow=true;cluster.add(leaf);
+     leafDummy.position.set(twigEnd.x+(Math.random()-.5)*.62,twigEnd.y+(Math.random()-.5)*.25,twigEnd.z+(Math.random()-.5)*.56);
+     leafDummy.rotation.set((Math.random()-.5)*.35,Math.random()*Math.PI,(Math.random()-.5)*.35);
+     leafDummy.scale.set(isAcacia?.28:.34,isAcacia?.12:.28,isAcacia?.24:.3);leafDummy.updateMatrix();
+     leafBatch.setMatrixAt(leafIndex,leafDummy.matrix);
+     leafBatch.setColorAt(leafIndex,new THREE.Color(heroLeafMats[(i+k+c+q)%heroLeafMats.length].color));leafIndex++;
     }
    }
   }
+  leafBatch.count=leafIndex;leafBatch.instanceMatrix.needsUpdate=true;crownPivot.add(leafBatch);
  }
  heroTreeCrowns.push({pivot:crownPivot,phase:i*.71,amount:isBaobab?.012:.028});
  tree.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
