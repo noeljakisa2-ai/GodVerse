@@ -34,6 +34,7 @@ const N=150,size=110,geo=new THREE.PlaneGeometry(size,size,N,N);geo.rotateX(-Mat
 // Far-off Serengeti kopjes: layered weathered granite outcrops on the horizon.
 const kopjeMats=[mat(0x75634c),mat(0x927957),mat(0x5f5545)];
 for(const [kx,kz,sc] of [[-39,-31,1.0],[34,-39,.78],[43,18,1.15],[-35,39,.72]]){const base=heightAt(kx,kz),hill=new THREE.Group();hill.position.set(kx,base,kz);for(let q=0;q<5;q++){const boulder=new THREE.Mesh(new THREE.DodecahedronGeometry(1.25,1),kopjeMats[q%3]);boulder.position.set((Math.random()-.5)*1.5,1.05+q*.42,(Math.random()-.5)*1.4);boulder.scale.set(sc*(1.15-q*.08),sc*(1.05-q*.12),sc*(.9-q*.07));boulder.rotation.set(.12*q,Math.random()*2,.08*q);boulder.castShadow=true;boulder.receiveShadow=true;hill.add(boulder)}world.add(hill)}
+const trunkMat=new THREE.MeshStandardMaterial({color:0x59402d,roughness:1});
 // Distant umbrella-shaped acacias break the horizon without crowding the wildlife.
 const horizonTreeMat=new THREE.MeshStandardMaterial({color:0x59613a,roughness:1});
 for(let h=0;h<34;h++){const a=h/34*Math.PI*2,r=29+(h%4)*3,x=Math.cos(a)*r,z=Math.sin(a)*r,y=heightAt(x,z),tree=new THREE.Group();tree.position.set(x,y,z);const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.12,.2,2.3,7),trunkMat);trunk.position.y=1.15;tree.add(trunk);const crown=new THREE.Mesh(new THREE.SphereGeometry(1,9,7),horizonTreeMat);crown.position.y=2.5;crown.scale.set(1.45,.38,1.25);tree.add(crown);world.add(tree)}
@@ -47,7 +48,6 @@ const rockMat=mat(0x777d7b);
 const trunkGeo=new THREE.CylinderGeometry(.075,.14,1,8),branchGeo=new THREE.CylinderGeometry(.025,.06,1,6);
 const leafGeo=new THREE.SphereGeometry(1,10,8),pineGeo=new THREE.ConeGeometry(1,1,7);
 const bladeGeo=new THREE.ConeGeometry(.075,1,4);bladeGeo.translate(0,.5,0);
-const trunkMat=new THREE.MeshStandardMaterial({color:0x59402d,roughness:1});
 const branchMat=new THREE.MeshStandardMaterial({color:0x65482f,roughness:1});
 const leafMat=new THREE.MeshStandardMaterial({color:0x68783d,roughness:1});
 const pineMat=new THREE.MeshStandardMaterial({color:0x28583a,roughness:1});
