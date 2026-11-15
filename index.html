@@ -6,18 +6,15 @@
 <style>
 *{box-sizing:border-box}html,body,#world{margin:0;width:100%;height:100%;overflow:hidden}body{font:14px system-ui;background:#91bfd1;color:#f4f2e8}canvas{display:block}
 header{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:15px 18px;pointer-events:none;text-shadow:0 2px 8px #203329}.brand{font-weight:900;letter-spacing:.22em}.brand small{display:block;font-size:9px;letter-spacing:.18em;color:#f0e7d0}.status{background:#14251dbd;border:1px solid #ffffff35;border-radius:30px;padding:8px 11px;font-size:10px;letter-spacing:.12em}
-.panel{position:fixed;left:14px;top:75px;width:220px;padding:13px;background:#13231ddd;border:1px solid #ffffff30;border-radius:15px;backdrop-filter:blur(12px);box-shadow:0 12px 36px #10201855}.panel h2{font-size:10px;letter-spacing:.17em;color:#e8c98c;margin:0 0 10px}.panel p{font-size:11px;color:#d0d9cc;line-height:1.5;margin:0 0 10px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.metric{padding:8px;background:#ffffff0d;border-radius:8px}.metric small{display:block;color:#aabaaa;font-size:9px}.metric b{font-size:13px}.controls{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}button{border:1px solid #ffffff2a;background:#314637;color:#f6f1df;border-radius:8px;padding:9px 6px;font-size:10px}button.active{background:#a0804d;color:#fff4d8}#toggle{display:none}.hint{position:fixed;right:14px;bottom:14px;background:#14251dbd;border:1px solid #ffffff30;border-radius:9px;padding:8px 10px;font-size:10px;color:#e5eadf;pointer-events:none}
-@media(max-width:650px){header{padding:11px}.panel{top:58px;left:8px;width:195px;padding:10px}.panel.closed{display:none}#toggle{display:block;position:fixed;left:8px;bottom:8px}.hint{right:8px;bottom:8px;font-size:9px}}
+.hint{position:fixed;right:14px;bottom:14px;background:#14251dbd;border:1px solid #ffffff30;border-radius:9px;padding:8px 10px;font-size:10px;color:#e5eadf;pointer-events:none}
+@media(max-width:650px){header{padding:11px}.hint{right:8px;bottom:8px;font-size:9px}}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 </head>
 <body>
 <div id="world"></div>
 <header><div class="brand">GODVERSE<small>THE LIVING LANDSCAPE</small></div><div class="status" id="status">● LANDSCAPE READY</div></header>
-<section class="panel" id="panel"><h2>LANDSCAPE CONTROL</h2><p>A new voxel African wilderness. Explore the terrain, biomes, rivers and skies.</p>
-<div class="grid"><div class="metric"><small>BIOMES</small><b>6 regions</b></div><div class="metric"><small>WORLD STYLE</small><b>Voxel 3D</b></div><div class="metric"><small>TERRAIN</small><b>Hills & peaks</b></div><div class="metric"><small>WATER</small><b>Rivers & falls</b></div></div>
-<div class="controls"><button id="clouds" class="active">☁ Clouds on</button><button id="rain">🌧 Rain</button><button id="clear">☀ Clear sky</button><button id="reset">↻ Reset view</button></div></section>
-<button id="toggle">☰ Landscape</button><div class="hint">Drag to look • Pinch / scroll to zoom</div>
+<div class="hint">Drag to look • Pinch / scroll to zoom</div>
 <script type="module">
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
@@ -51,9 +48,31 @@ for(let ix=0;ix<cols;ix++)for(let iz=0;iz<cols;iz++){
 function instanced(material,matrices){const m=new THREE.InstancedMesh(block,materials[material],matrices.length);matrices.forEach((v,i)=>m.setMatrixAt(i,v));m.instanceMatrix.needsUpdate=true;m.castShadow=!mobile;m.receiveShadow=true;world.add(m);return m}
 for(const [name,arr] of Object.entries(topInstances))if(arr.length)instanced(name,arr);
 instanced('soil',soilInstances);
-// Mountain ridges beyond the playable valley add a clear horizon silhouette.
-function ridge(x,z,scale,material){const g=new THREE.Group();const m=new THREE.Mesh(new THREE.ConeGeometry(1,1,5),materials[material]);m.scale.set(scale,scale*1.5,scale);m.position.y=scale*.7;g.add(m);g.position.set(x,rawHeight(x,z)-.5,z);g.rotation.y=(x+z)*.03;world.add(g)}
-for(let i=0;i<24;i++){const side=i%4,x=side===0?-53+i*4:side===1?53-i*4:(Math.random()-.5)*100,z=side===2?-53+i*4:side===3?53-i*4:(Math.random()-.5)*100;ridge(x,z,5+Math.random()*8,'rock')}
+// Broad, stepped voxel mountains replace the old cone-shaped spike silhouettes.
+function addVoxelMountain(cx,cz,baseRadius,tiers){
+ const rockBlocks=[],snowBlocks=[];
+ for(let tier=0;tier<tiers;tier++){
+  const radius=Math.max(2.1,baseRadius-tier*.9);
+  for(let ix=0;ix<cols;ix++)for(let iz=0;iz<cols;iz++){
+   const x=(ix-cols/2)*cell,z=(iz-cols/2)*cell;
+   const dx=x-cx,dz=z-cz;
+   if(Math.hypot(dx,dz)>radius)continue;
+   dummy.position.set(x,heightAt(x,z)+tier+.52,z);
+   dummy.scale.set(cell,1.08,cell);dummy.rotation.set(0,0,0);dummy.updateMatrix();
+   (tier>=tiers-2?snowBlocks:rockBlocks).push(dummy.matrix.clone());
+  }
+ }
+ if(rockBlocks.length)instancedMountain('rock',rockBlocks);
+ if(snowBlocks.length)instancedMountain('snow',snowBlocks);
+}
+function instancedMountain(material,matrices){
+ const mesh=new THREE.InstancedMesh(block,materials[material],matrices.length);
+ matrices.forEach((matrix,i)=>mesh.setMatrixAt(i,matrix));
+ mesh.instanceMatrix.needsUpdate=true;mesh.castShadow=!mobile;mesh.receiveShadow=true;world.add(mesh);
+}
+addVoxelMountain(-23.8,21,10.5,8);
+addVoxelMountain(25.2,-22.4,9.5,7);
+addVoxelMountain(2.8,30.8,7.5,6);
 // Voxel trees: squared trunks and layered block canopies, varied silhouettes.
 function tree(x,z,type){const y=heightAt(x,z),g=new THREE.Group();const trunk=new THREE.Mesh(new THREE.BoxGeometry(.55,2.5,.55),materials.trunk);trunk.position.y=1.25;g.add(trunk);
  if(type==='acacia'){const stem=new THREE.Mesh(new THREE.BoxGeometry(.38,1.5,.38),materials.trunk);stem.position.y=2.7;g.add(stem);const crown=new THREE.Mesh(new THREE.BoxGeometry(4.2,.8,2.5),materials.leaf2);crown.position.y=3.7;g.add(crown);const crown2=new THREE.Mesh(new THREE.BoxGeometry(2.9,.6,2),materials.leaf1);crown2.position.y=4.15;g.add(crown2)}
@@ -78,10 +97,7 @@ for(let i=0;i<(mobile?9:16);i++){const c=new THREE.Group();for(let j=0;j<5;j++){
 const sunDisc=new THREE.Mesh(new THREE.SphereGeometry(2.5,18,12),new THREE.MeshBasicMaterial({color:0xffe4a0}));sunDisc.position.set(-48,48,-72);skyGroup.add(sunDisc);
 let cloudVisible=true,raining=false,raindrops=null;
 function setRain(on){raining=on;if(raindrops){scene.remove(raindrops);raindrops.geometry.dispose();raindrops=null}if(on){const count=mobile?400:1100,geo=new THREE.BufferGeometry(),pos=new Float32Array(count*3);for(let i=0;i<count;i++){pos[i*3]=(Math.random()-.5)*100;pos[i*3+1]=Math.random()*38;pos[i*3+2]=(Math.random()-.5)*100}geo.setAttribute('position',new THREE.BufferAttribute(pos,3));raindrops=new THREE.Points(geo,new THREE.PointsMaterial({color:0xd6edf5,size:.1,transparent:true,opacity:.7}));scene.add(raindrops);scene.background.set(0x718f9e);scene.fog.color.set(0x718f9e)}else{scene.background.set(0x91bfd1);scene.fog.color.set(0x91bfd1)}}
-document.querySelector('#clouds').onclick=e=>{cloudVisible=!cloudVisible;skyGroup.visible=cloudVisible;e.currentTarget.textContent=cloudVisible?'☁ Clouds on':'☁ Clouds off';e.currentTarget.classList.toggle('active',cloudVisible)};
-document.querySelector('#rain').onclick=()=>setRain(true);document.querySelector('#clear').onclick=()=>setRain(false);
-document.querySelector('#reset').onclick=()=>{camera.position.set(38,34,43);controls.target.set(0,3,0);controls.update()};
-document.querySelector('#toggle').onclick=()=>document.querySelector('#panel').classList.toggle('closed');
+// Dashboard removed for now; world controls will return as a redesigned interface later.
 let last=performance.now();function animate(now){requestAnimationFrame(animate);const dt=Math.min((now-last)/1000,.05);last=now;for(const c of clouds)c.position.x+=c.userData.drift*dt;if(raindrops){const p=raindrops.geometry.attributes.position;for(let i=0;i<p.count;i++){let y=p.getY(i)-dt*19;if(y<0)y=38;p.setY(i,y)}p.needsUpdate=true}controls.update();renderer.render(scene,camera)}requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 document.querySelector('#status').textContent='● LANDSCAPE READY';
