@@ -20,9 +20,9 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 const mobile=matchMedia('(max-width:760px),(pointer:coarse)').matches;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x91bfd1);scene.fog=new THREE.Fog(0x91bfd1,72,145);
-const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,240);camera.position.set(38,34,43);
+const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,240);camera.position.set(38,38,48);
 const renderer=new THREE.WebGLRenderer({antialias:!mobile,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,mobile?1:1.35));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=!mobile;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.querySelector('#world').appendChild(renderer.domElement);
-const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,3,0);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.47;controls.minDistance=12;controls.maxDistance=105;
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,4,0);controls.enableDamping=true;controls.minPolarAngle=.12;controls.maxPolarAngle=1.38;controls.minDistance=18;controls.maxDistance=92;
 scene.add(new THREE.HemisphereLight(0xe5f5ff,0x536044,2));const sun=new THREE.DirectionalLight(0xffe2b0,2.6);sun.position.set(-35,55,25);sun.castShadow=!mobile;sun.shadow.mapSize.set(1024,1024);scene.add(sun);
 const world=new THREE.Group();scene.add(world);const skyGroup=new THREE.Group();scene.add(skyGroup);
 const block=new THREE.BoxGeometry(1,1,1);
@@ -33,7 +33,7 @@ rock:new THREE.MeshStandardMaterial({color:0x777b72,roughness:1}),soil:new THREE
 snow:new THREE.MeshStandardMaterial({color:0xe5e6dc,roughness:1}),water:new THREE.MeshStandardMaterial({color:0x347f9a,roughness:.2,metalness:.15,transparent:true,opacity:.88}),
 trunk:new THREE.MeshStandardMaterial({color:0x60432b,roughness:1}),leaf1:new THREE.MeshStandardMaterial({color:0x486b3d,roughness:1}),leaf2:new THREE.MeshStandardMaterial({color:0x718b43,roughness:1}),leaf3:new THREE.MeshStandardMaterial({color:0x315a39,roughness:1})
 };
-const cell=1.4,half=45,cols=65,topInstances={grass:[],savanna:[],forest:[],sand:[],rock:[],snow:[]},soilInstances=[];
+const cell=1.4,half=70,cols=101,topInstances={grass:[],savanna:[],forest:[],sand:[],rock:[],snow:[]},soilInstances=[];
 function biome(x,z){if(x>18&&z<-10)return 'desert';if(x<-18&&z<4)return 'forest';if(x<-16&&z>15)return 'wetland';if(x>14&&z>15)return 'highland';if(Math.abs(x)>39||Math.abs(z)>39)return 'shore';return 'savanna'}
 function rawHeight(x,z){let h=2.2+Math.sin(x*.095)*1.2+Math.cos(z*.11)*1.05+Math.sin((x+z)*.065)*1.2;h+=Math.max(0,1-Math.hypot(x+23,z-21)/22)*11;h+=Math.max(0,1-Math.hypot(x-25,z+22)/19)*8;h+=Math.max(0,1-Math.hypot(x-2,z-30)/13)*5;return h}
 function heightAt(x,z){let h=rawHeight(x,z);const b=biome(x,z);if(b==='desert')h-=.8;if(b==='wetland')h-=1;return Math.max(1,Math.round(h/1.15)*1.15)}
