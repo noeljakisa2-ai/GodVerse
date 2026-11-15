@@ -89,9 +89,24 @@ function tree(x,z,type){const y=heightAt(x,z),g=new THREE.Group();const trunk=ne
  else{for(let k=0;k<3;k++){const crown=new THREE.Mesh(new THREE.BoxGeometry(2.5-k*.45,1.8,2.5-k*.45),materials[type==='forest'?'leaf3':'leaf1']);crown.position.y=2.4+k*1.2;g.add(crown)}}
  g.position.set(x,y,z);g.rotation.y=Math.random()*Math.PI*2;g.scale.setScalar(.8+Math.random()*.45);g.traverse(o=>{if(o.isMesh)o.castShadow=!mobile});world.add(g)}
 for(let i=0;i<(mobile?70:125);i++){const x=(Math.random()-.5)*88,z=(Math.random()-.5)*88,b=biome(x,z);if(Math.hypot(x,z)<7||Math.hypot(x-7,z-15)<8)continue;tree(x,z,b==='forest'?'forest':'acacia')}
-// Instanced grass patches, clustered in the open savanna.
-const grassGeo=new THREE.BoxGeometry(.12,.55,.12),grassMat=new THREE.MeshStandardMaterial({color:0x8d9d4b,roughness:1});const grass=new THREE.InstancedMesh(grassGeo,grassMat,mobile?850:1900);
-for(let i=0;i<grass.count;i++){const x=(Math.random()-.5)*88,z=(Math.random()-.5)*88,b=biome(x,z);dummy.position.set(x,heightAt(x,z)+.28,z);dummy.rotation.set(0,Math.random()*6,Math.random()*.25);dummy.scale.set(.7+Math.random(),.7+Math.random(),.7+Math.random());dummy.updateMatrix();grass.setMatrixAt(i,dummy.matrix)}world.add(grass);
+// Layered voxel-friendly grass tufts: broad tapered blades instead of thin square sticks.
+const bladeShape=new THREE.Shape();bladeShape.moveTo(-.16,0);bladeShape.quadraticCurveTo(-.12,.42,0,.82);bladeShape.quadraticCurveTo(.18,.38,.16,0);bladeShape.close();
+const grassGeo=new THREE.ShapeGeometry(bladeShape);
+const grassMat=new THREE.MeshStandardMaterial({color:0x8b9d4e,roughness:1,side:THREE.DoubleSide});
+const grassCount=mobile?1050:2500;
+const grassA=new THREE.InstancedMesh(grassGeo,grassMat,grassCount),grassB=new THREE.InstancedMesh(grassGeo,grassMat,grassCount);
+const grassPalette=[new THREE.Color(0x738c3e),new THREE.Color(0x8da34b),new THREE.Color(0xa0a957),new THREE.Color(0x627d39)];
+for(let i=0;i<grassCount;i++){
+ let x,z,b,tries=0;
+ do{x=(Math.random()-.5)*94;z=(Math.random()-.5)*94;b=biome(x,z);tries++}while(tries<8&&(b==='desert'||b==='highland'||riverDistance(x,z)<3.8||Math.hypot(x,z)<7));
+ const y=heightAt(x,z),h=.65+Math.random()*.75,rot=Math.random()*Math.PI*2;
+ dummy.position.set(x,y+.015,z);dummy.rotation.set(0,rot,0);dummy.scale.set(.8+Math.random()*.9,h,.8+Math.random()*.9);dummy.updateMatrix();grassA.setMatrixAt(i,dummy.matrix);
+ dummy.rotation.y=rot+Math.PI/2;dummy.scale.set(.7+Math.random()*.8,h*.82,.7+Math.random()*.8);dummy.updateMatrix();grassB.setMatrixAt(i,dummy.matrix);
+ const shade=grassPalette[Math.floor(Math.random()*grassPalette.length)];grassA.setColorAt(i,shade);grassB.setColorAt(i,shade.clone().multiplyScalar(.88));
+}
+grassA.instanceMatrix.needsUpdate=true;grassB.instanceMatrix.needsUpdate=true;
+if(grassA.instanceColor)grassA.instanceColor.needsUpdate=true;if(grassB.instanceColor)grassB.instanceColor.needsUpdate=true;
+grassA.castShadow=!mobile;grassB.castShadow=!mobile;world.add(grassA,grassB);
 // River curves through the lowlands; broad banks and a waterfall cascade.
 // Reuse the river centreline defined before terrain generation so the channel is carved into the ground.
 const riverMat=new THREE.MeshStandardMaterial({color:0x287d9b,roughness:.16,metalness:.08,transparent:true,opacity:.94,side:THREE.DoubleSide});
