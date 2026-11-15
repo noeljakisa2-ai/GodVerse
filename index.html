@@ -8,10 +8,28 @@
 header{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:15px 18px;pointer-events:none;text-shadow:0 2px 8px #203329}.brand{font-weight:900;letter-spacing:.22em}.brand small{display:block;font-size:9px;letter-spacing:.18em;color:#f0e7d0}.status{background:#14251dbd;border:1px solid #ffffff35;border-radius:30px;padding:8px 11px;font-size:10px;letter-spacing:.12em}
 .hint{position:fixed;right:14px;bottom:14px;background:#14251dbd;border:1px solid #ffffff30;border-radius:9px;padding:8px 10px;font-size:10px;color:#e5eadf;pointer-events:none}
 @media(max-width:650px){header{padding:11px}.hint{right:8px;bottom:8px;font-size:9px}}
+/* Immediate landscape fallback stays visible while the 3D engine starts. */
+#loadingScene{position:fixed;inset:0;overflow:hidden;background:linear-gradient(#91bfd1 0 57%,#d5c78a 57% 100%);z-index:0}
+#loadingScene .sun{position:absolute;width:42px;height:42px;border-radius:50%;background:#ffe5a3;top:15%;right:18%;box-shadow:0 0 35px #ffe5a366}
+#loadingScene .cloud{position:absolute;width:110px;height:28px;border-radius:40px;background:#f1f4ed;top:18%;left:14%;opacity:.9;box-shadow:30px -12px 0 -3px #f1f4ed,60px 0 0 -5px #f1f4ed}
+#loadingScene .ridge{position:absolute;bottom:36%;width:0;height:0;border-left:150px solid transparent;border-right:150px solid transparent;border-bottom:230px solid #737a6d}
+#loadingScene .ridge:after{content:"";position:absolute;left:-48px;top:54px;border-left:48px solid transparent;border-right:48px solid transparent;border-bottom:70px solid #e4e5dc}
+#loadingScene .r1{left:4%;transform:scale(.8)}
+#loadingScene .r2{right:0;transform:scale(1.08)}
+#loadingScene .plain{position:absolute;bottom:0;left:-10%;width:120%;height:42%;background:linear-gradient(165deg,#9b9d56,#697d3f 60%,#536a39);border-radius:50% 50% 0 0/18% 18% 0 0}
+#loadingScene .river{position:absolute;bottom:0;left:45%;width:14%;height:42%;background:#347f9a;clip-path:polygon(42% 0,70% 0,100% 100%,0 100%);opacity:.9}
+#loadingScene .tree{position:absolute;bottom:28%;width:12px;height:64px;background:#60432b}
+#loadingScene .tree:before{content:"";position:absolute;left:-26px;top:-27px;width:64px;height:34px;background:#486b3d;border-radius:45%}
+#loadingScene .t1{left:19%}.t2{left:76%;transform:scale(1.2)}.t3{left:88%;transform:scale(.8)}
+#world{position:relative;z-index:1}
+#world canvas{position:relative;z-index:1}
+body{background:#91bfd1}
+
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 </head>
 <body>
+<div id="loadingScene" aria-label="GodVerse landscape loading"><div class="sun"></div><div class="cloud"></div><div class="ridge r1"></div><div class="ridge r2"></div><div class="plain"></div><div class="river"></div><div class="tree t1"></div><div class="tree t2"></div><div class="tree t3"></div></div>
 <div id="world"></div>
 <header><div class="brand">GODVERSE<small>THE LIVING LANDSCAPE</small></div><div class="status" id="status">● LANDSCAPE READY</div></header>
 <div class="hint">Drag to look • Pinch / scroll to zoom</div>
@@ -161,7 +179,7 @@ function animate(now){
  for(const c of clouds)c.position.x+=c.userData.drift*dt;
  if(raindrops){const p=raindrops.geometry.attributes.position;for(let i=0;i<p.count;i++){let y=p.getY(i)-dt*19;if(y<0)y=38;p.setY(i,y)}p.needsUpdate=true}
  controls.update();renderer.render(scene,camera);
- if(firstFrame){firstFrame=false;document.querySelector('#status').textContent='● WORLD RENDERED'}
+ if(firstFrame){firstFrame=false;document.querySelector('#status').textContent='● WORLD RENDERED';const fallback=document.querySelector('#loadingScene');if(fallback)fallback.remove()}
 }
 renderer.render(scene,camera);
 requestAnimationFrame(animate);
@@ -169,7 +187,7 @@ addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updat
 }
 start().catch(error=>{
  const status=document.querySelector('#status');
- status.textContent='● WORLD FAILED TO LOAD';
+ status.textContent='● 3D ENGINE UNAVAILABLE — FALLBACK ACTIVE';
  status.style.background='#762f2f';
  const panel=document.createElement('div');
  panel.style.cssText='position:fixed;left:12px;right:12px;top:78px;padding:12px;background:#321d1deF;color:#fff;border:1px solid #ffaaaa;border-radius:10px;z-index:10;font:12px system-ui;overflow-wrap:anywhere';
