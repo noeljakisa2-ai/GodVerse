@@ -123,8 +123,8 @@ const pondMat=new THREE.MeshStandardMaterial({color:0x26718a,roughness:.25,metal
 const pond=new THREE.Mesh(new THREE.CircleGeometry(3.1,40),pondMat);pond.rotation.x=-Math.PI/2;pond.position.set(11,heightAt(11,0)+.035,0);world.add(pond);
 const rockMat=mat(0x777d7b);
 // Vegetation layer: broadleaf, pine and palm trees plus instanced grass.
-const trunkGeo=new THREE.CylinderGeometry(.075,.14,1,8),branchGeo=new THREE.CylinderGeometry(.025,.06,1,6);
-const leafGeo=new THREE.IcosahedronGeometry(1,1),pineGeo=new THREE.ConeGeometry(1,1,7);
+const trunkGeo=new THREE.BoxGeometry(.34,1,.34),branchGeo=new THREE.BoxGeometry(.12,1,.12);
+const leafGeo=new THREE.BoxGeometry(1,1,1),pineGeo=new THREE.BoxGeometry(1,1,1);
 // Broad, tapered grass blades with a gentle natural curve (not cone-shaped spikes).
 const bladeGeo=(()=>{
  const g=new THREE.BufferGeometry();
@@ -200,7 +200,7 @@ const leafOutline=new THREE.Shape();
 leafOutline.moveTo(0,0);
 leafOutline.quadraticCurveTo(.34,.18,.72,.04);
 leafOutline.quadraticCurveTo(.42,-.2,0,0);
-const leafShape=new THREE.ShapeGeometry(leafOutline,5);
+const leafShape=new THREE.BoxGeometry(.72,.32,.62);
 leafShape.computeVertexNormals();
 const heroTreeCount=mobileMode?10:36;
 for(let i=0;i<heroTreeCount;i++){
@@ -212,11 +212,11 @@ for(let i=0;i<heroTreeCount;i++){
  let trunk;
  if(isBaobab){
   const profile=[new THREE.Vector2(0,0),new THREE.Vector2(trunkRadius*.78,.12),new THREE.Vector2(trunkRadius*1.35,.55),new THREE.Vector2(trunkRadius*1.12,1.45),new THREE.Vector2(trunkRadius*.82,2.35),new THREE.Vector2(trunkRadius*.58,trunkHeight),new THREE.Vector2(0,trunkHeight)];
-  trunk=new THREE.Mesh(new THREE.LatheGeometry(profile,14),heroBarkLight);
- }else trunk=new THREE.Mesh(new THREE.CylinderGeometry(trunkRadius*.62,trunkRadius*1.35,trunkHeight,10,4),heroBark);
+  trunk=new THREE.Mesh(new THREE.BoxGeometry(trunkRadius*2.5,trunkHeight,trunkRadius*2.5),heroBarkLight);
+ }else trunk=new THREE.Mesh(new THREE.BoxGeometry(trunkRadius*1.8,trunkHeight,trunkRadius*1.8),heroBark);
  trunk.position.y=isBaobab?0:trunkHeight/2;trunk.castShadow=true;trunk.receiveShadow=true;tree.add(trunk);
  if(isBaobab||i%3===0)for(let k=0;k<5;k++){
-  const ang=k*Math.PI*2/5,root=new THREE.Mesh(new THREE.ConeGeometry(isBaobab?.22:.11,isBaobab?1.05:.65,7),heroBark);
+  const ang=k*Math.PI*2/5,root=new THREE.Mesh(new THREE.BoxGeometry(isBaobab?.34:.18,isBaobab?1.05:.65,isBaobab?.34:.18),heroBark);
   root.position.set(Math.cos(ang)*(isBaobab?.58:.3),isBaobab?.34:.22,Math.sin(ang)*(isBaobab?.58:.3));
   root.rotation.z=Math.cos(ang)*.78;root.rotation.x=-Math.sin(ang)*.78;root.castShadow=true;tree.add(root);
  }
@@ -237,12 +237,12 @@ for(let i=0;i<heroTreeCount;i++){
    const ang=k*Math.PI*2/limbCount+(i%5)*.19;
    const end=new THREE.Vector3(Math.cos(ang)*(isAcacia?1.3:.85),isAcacia?.62:.92,Math.sin(ang)*(isAcacia?1.3:.85));
    const limbDir=end.clone();
-   const limb=new THREE.Mesh(new THREE.CylinderGeometry(.018,.075,limbDir.length(),7),heroBark);
+   const limb=new THREE.Mesh(new THREE.BoxGeometry(.13,limbDir.length(),.13),heroBark);
    limb.position.copy(end).multiplyScalar(.5);limb.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),limbDir.normalize());limb.castShadow=true;crownPivot.add(limb);
    for(let c=0;c<twigsPerLimb;c++){
     const t=.48+c*.23,base=new THREE.Vector3(end.x*t,end.y*t,end.z*t);
     const twigEnd=base.clone().add(new THREE.Vector3(Math.cos(ang+c*2.4)*.38,.18,Math.sin(ang+c*2.4)*.38));
-    const twigDir=twigEnd.clone().sub(base),twig=new THREE.Mesh(new THREE.CylinderGeometry(.009,.026,twigDir.length(),5),heroBark);
+    const twigDir=twigEnd.clone().sub(base),twig=new THREE.Mesh(new THREE.BoxGeometry(.075,twigDir.length(),.075),heroBark);
     twig.position.copy(base).add(twigEnd).multiplyScalar(.5);twig.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),twigDir.normalize());crownPivot.add(twig);
     for(let q=0;q<leafN;q++){
      leafDummy.position.set(twigEnd.x+(Math.random()-.5)*.62,twigEnd.y+(Math.random()-.5)*.25,twigEnd.z+(Math.random()-.5)*.56);
@@ -332,7 +332,7 @@ function buildAnimalModel(species,scale){
  const root=new THREE.Group(),parts={legs:[],knees:[],tail:null,head:null};
  const palettes={Zebra:{body:0xe8e2d4,dark:0x202326,hoof:0x282522,muzzle:0x302c28},Giraffe:{body:0xd69a3e,dark:0x754324,hoof:0x49362a,muzzle:0x4b3020},Elephant:{body:0x858d89,dark:0x626d69,hoof:0x555d5a,muzzle:0x737c78},Lion:{body:0xc99149,dark:0x81502d,hoof:0x49382a,muzzle:0x4b382b},Antelope:{body:0xb9844c,dark:0x65452d,hoof:0x49372a,muzzle:0x3b2b20}};
  const p=palettes[species],body=animalMat(p.body),dark=animalMat(p.dark),hoof=animalMat(p.hoof),muzzle=animalMat(p.muzzle),cream=animalMat(0xe8d8b8),black=animalMat(0x171513),sphere=new THREE.SphereGeometry(1,28,20);
- function blob(parent,material,pos,size){const m=new THREE.Mesh(sphere,material);m.position.set(...pos);m.scale.set(...size);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
+ function blob(parent,material,pos,size){const m=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),material);m.position.set(...pos);m.scale.set(...size);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
  function tube(parent,points,radius,material,segments=18){const curve=new THREE.CatmullRomCurve3(points.map(v=>new THREE.Vector3(...v)));const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,segments,radius,8,false),material);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh}
  // A single sculpted torso replaces overlapping ball-shaped body pieces.
  const torsoProfiles={
@@ -342,7 +342,7 @@ function buildAnimalModel(species,scale){
   Zebra:[[0,-.72],[.29,-.69],[.43,-.48],[.46,-.08],[.43,.32],[.32,.58],[.2,.7],[0,.72]],
   Antelope:[[0,-.67],[.24,-.65],[.34,-.43],[.36,-.08],[.32,.28],[.25,.52],[.16,.65],[0,.67]]
  };
- const torsoGeo=new THREE.LatheGeometry(torsoProfiles[species].map(v=>new THREE.Vector2(v[0],v[1])),32);
+ const torsoGeo=new THREE.BoxGeometry(species==='Elephant'?1.45:species==='Lion'?1.12:1.02,species==='Elephant'?1.35:1.05,species==='Elephant'?1.28:1.12);
  torsoGeo.rotateX(Math.PI/2);
  const torso=new THREE.Mesh(torsoGeo,body);
  torso.position.set(0,species==='Elephant'?1.05:.98,0);
@@ -352,10 +352,10 @@ function buildAnimalModel(species,scale){
  for(const x of legXs)for(const z of [-.34,.34]){
   const hip=new THREE.Group();hip.position.set(x,species==='Elephant'?.92:.82,z);root.add(hip);
   const upperLen=species==='Elephant'?.43:species==='Giraffe'?.43:.36,upperR=species==='Elephant'?.19:species==='Lion'?.115:.09;
-  const upper=new THREE.Mesh(new THREE.CapsuleGeometry(upperR,upperLen,6,12),body);upper.position.y=-upperLen*.42;upper.castShadow=true;hip.add(upper);
+  const upper=new THREE.Mesh(new THREE.BoxGeometry(upperR*2.2,upperLen,upperR*2.2),body);upper.position.y=-upperLen*.42;upper.castShadow=true;hip.add(upper);
   const knee=new THREE.Group();knee.position.y=-upperLen*.82;hip.add(knee);
   const lowerLen=species==='Elephant'?.34:species==='Giraffe'?.48:species==='Antelope'?.48:.39,lowerR=species==='Elephant'?.15:species==='Antelope'?.055:.07;
-  const lower=new THREE.Mesh(new THREE.CapsuleGeometry(lowerR,lowerLen,6,10),species==='Elephant'?body:dark);lower.position.y=-lowerLen*.43;lower.castShadow=true;knee.add(lower);
+  const lower=new THREE.Mesh(new THREE.BoxGeometry(lowerR*2.2,lowerLen,lowerR*2.2),species==='Elephant'?body:dark);lower.position.y=-lowerLen*.43;lower.castShadow=true;knee.add(lower);
   blob(knee,hoof,[0,-lowerLen*.86,.07],species==='Elephant'?[.19,.13,.23]:species==='Lion'?[.13,.105,.19]:[.095,.075,.16]);
   if(species==='Elephant')for(let toe=-1;toe<=1;toe++)blob(knee,cream,[toe*.075,-lowerLen*.9,.235],[.035,.045,.035]);
   parts.legs.push(hip);parts.knees.push(knee);
