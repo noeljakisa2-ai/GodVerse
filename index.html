@@ -67,7 +67,20 @@ const rockMat=mat(0x777d7b);
 // Vegetation layer: broadleaf, pine and palm trees plus instanced grass.
 const trunkGeo=new THREE.CylinderGeometry(.075,.14,1,8),branchGeo=new THREE.CylinderGeometry(.025,.06,1,6);
 const leafGeo=new THREE.IcosahedronGeometry(1,1),pineGeo=new THREE.ConeGeometry(1,1,7);
-const bladeGeo=new THREE.ConeGeometry(.075,1,4);bladeGeo.translate(0,.5,0);
+// Broad, tapered grass blades with a gentle natural curve (not cone-shaped spikes).
+const bladeGeo=(()=>{
+ const g=new THREE.BufferGeometry();
+ const v=new Float32Array([
+  0,0,0, -.055,.22,0, .055,.22,0,
+  0,0,0, -.05,.48,.018, .05,.48,.018,
+  0,0,0, -.032,.74,.045, .032,.74,.045,
+  0,0,0, 0,1,.075, 0,1,.075
+ ]);
+ const idx=[0,1,2,3,4,5,6,7,8,9,10,11];
+ g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));
+ g.setIndex(idx);g.computeVertexNormals();return g;
+})();
+
 const branchMat=new THREE.MeshStandardMaterial({color:0x65482f,roughness:1});
 const leafMat=new THREE.MeshStandardMaterial({color:0x68783d,roughness:1});
 const pineMat=new THREE.MeshStandardMaterial({color:0x28583a,roughness:1});
