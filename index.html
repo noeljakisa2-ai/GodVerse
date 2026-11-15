@@ -36,7 +36,10 @@ trunk:new THREE.MeshStandardMaterial({color:0x60432b,roughness:1}),leaf1:new THR
 const cell=1.4,half=70,cols=101,topInstances={grass:[],savanna:[],forest:[],sand:[],rock:[],snow:[]},soilInstances=[];
 function biome(x,z){if(x>18&&z<-10)return 'desert';if(x<-18&&z<4)return 'forest';if(x<-16&&z>15)return 'wetland';if(x>14&&z>15)return 'highland';if(Math.abs(x)>39||Math.abs(z)>39)return 'shore';return 'savanna'}
 function rawHeight(x,z){let h=2.2+Math.sin(x*.095)*1.2+Math.cos(z*.11)*1.05+Math.sin((x+z)*.065)*1.2;h+=Math.max(0,1-Math.hypot(x+23,z-21)/22)*11;h+=Math.max(0,1-Math.hypot(x-25,z+22)/19)*8;h+=Math.max(0,1-Math.hypot(x-2,z-30)/13)*5;return h}
-function heightAt(x,z){let h=rawHeight(x,z);const b=biome(x,z);if(b==='desert')h-=.8;if(b==='wetland')h-=1;return Math.max(1,Math.round(h/1.15)*1.15)}
+const riverPts=[[-47,-19],[-34,-14],[-23,-8],[-14,-2],[-5,5],[5,11],[14,17],[24,25],[39,34]].map(([x,z])=>new THREE.Vector3(x,0,z));
+const curve=new THREE.CatmullRomCurve3(riverPts);
+function riverDistance(x,z){let best=1e9;for(let i=0;i<riverPts.length-1;i++){const a=riverPts[i],b=riverPts[i+1],dx=b.x-a.x,dz=b.z-a.z,t=THREE.MathUtils.clamp(((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz),0,1);best=Math.min(best,Math.hypot(x-a.x-t*dx,z-a.z-t*dz))}return best}
+function heightAt(x,z){let h=rawHeight(x,z);const b=biome(x,z);if(b==='desert')h-=.8;if(b==='wetland')h-=1;const d=riverDistance(x,z);if(d<3.4)h-=2.1*(1-d/3.4);return Math.max(.2,Math.round(h/1.15)*1.15)}
 const dummy=new THREE.Object3D();
 for(let ix=0;ix<cols;ix++)for(let iz=0;iz<cols;iz++){
  const x=(ix-cols/2)*cell,z=(iz-cols/2)*cell,b=biome(x,z),h=heightAt(x,z),levels=Math.max(1,Math.round(h));
@@ -83,12 +86,12 @@ for(let i=0;i<(mobile?70:125);i++){const x=(Math.random()-.5)*88,z=(Math.random(
 const grassGeo=new THREE.BoxGeometry(.12,.55,.12),grassMat=new THREE.MeshStandardMaterial({color:0x8d9d4b,roughness:1});const grass=new THREE.InstancedMesh(grassGeo,grassMat,mobile?850:1900);
 for(let i=0;i<grass.count;i++){const x=(Math.random()-.5)*88,z=(Math.random()-.5)*88,b=biome(x,z);dummy.position.set(x,heightAt(x,z)+.28,z);dummy.rotation.set(0,Math.random()*6,Math.random()*.25);dummy.scale.set(.7+Math.random(),.7+Math.random(),.7+Math.random());dummy.updateMatrix();grass.setMatrixAt(i,dummy.matrix)}world.add(grass);
 // River curves through the lowlands; broad banks and a waterfall cascade.
-const riverPts=[[-47,-19],[-34,-14],[-23,-8],[-14,-2],[-5,5],[5,11],[14,17],[24,25],[39,34]].map(([x,z])=>new THREE.Vector3(x,0,z));const curve=new THREE.CatmullRomCurve3(riverPts);
-const riverMat=new THREE.MeshStandardMaterial({color:0x3e8da6,roughness:.2,metalness:.12,transparent:true,opacity:.9,side:THREE.DoubleSide});
+// Reuse the river centreline defined before terrain generation so the channel is carved into the ground.
+const riverMat=new THREE.MeshStandardMaterial({color:0x287d9b,roughness:.16,metalness:.08,transparent:true,opacity:.94,side:THREE.DoubleSide});
 function ribbon(c,width,yOffset){const verts=[],idx=[],steps=180;for(let i=0;i<=steps;i++){const t=i/steps,p=c.getPoint(t),tan=c.getTangent(t),side=new THREE.Vector3(-tan.z,0,tan.x).normalize(),y=heightAt(p.x,p.z)+yOffset;for(const s of [-1,1]){const q=p.clone().addScaledVector(side,s*width/2);verts.push(q.x,y,q.z)}if(i<steps){const n=i*2;idx.push(n,n+1,n+2,n+1,n+3,n+2)}}const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(idx);geo.computeVertexNormals();const mesh=new THREE.Mesh(geo,riverMat);mesh.renderOrder=3;world.add(mesh);return mesh}
-ribbon(curve,3.1,.12);
-const pool=new THREE.Mesh(new THREE.BoxGeometry(8,.16,6),materials.water);pool.position.set(8,heightAt(8,15)+.05,15);world.add(pool);
-const waterfall=new THREE.Group();const sheet=new THREE.Mesh(new THREE.BoxGeometry(3.4,3.8,.18),new THREE.MeshBasicMaterial({color:0x9ad9e2,transparent:true,opacity:.76,side:THREE.DoubleSide}));sheet.position.y=-1.8;waterfall.add(sheet);
+ribbon(curve,4.2,.16);
+const pool=new THREE.Mesh(new THREE.BoxGeometry(8,.18,6),materials.water);pool.position.set(8,heightAt(8,15)+.02,15);world.add(pool);
+const waterfall=new THREE.Group();const sheet=new THREE.Mesh(new THREE.BoxGeometry(3.4,3.8,.18),new THREE.MeshBasicMaterial({color:0x74c7d8,transparent:true,opacity:.82,side:THREE.DoubleSide}));sheet.position.y=-1.8;waterfall.add(sheet);const sideFlow=new THREE.Mesh(new THREE.BoxGeometry(.45,3.2,.22),new THREE.MeshBasicMaterial({color:0xc5edf0,transparent:true,opacity:.72}));sideFlow.position.set(-1.45,-1.55,.08);waterfall.add(sideFlow);
 for(let i=0;i<5;i++){const drop=new THREE.Mesh(new THREE.BoxGeometry(.12,.55,.13),new THREE.MeshBasicMaterial({color:0xe0f5f1,transparent:true,opacity:.8}));drop.position.set((Math.random()-.5)*2.8,-Math.random()*3.3,.15);waterfall.add(drop)}
 waterfall.position.set(8,heightAt(8,15)+1.9,15);world.add(waterfall);
 // Clouds are soft low-poly puffs with slow drift.
