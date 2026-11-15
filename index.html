@@ -324,6 +324,21 @@ function buildAnimalModel(species,scale){
   if(species==='Antelope')for(const side of [-1,1])tube(head,[[side*.11,.22,.02],[side*.16,.49,.02],[side*.22,.73,.11],[side*.19,.96,.19]],.032,dark,20);
  }
  if(species==='Zebra'){for(const side of [-1,1])for(let i=0;i<11;i++){const z=-.68+i*.125;tube(root,[[-.45,1.0,z],[-.4,1.24,z+.025],[-.2,1.39,z+.035],[.08,1.4,z+.035],[.38,1.25,z+.02],[.46,1.0,z]],.022,dark,12)}const mane=blob(root,dark,[0,1.48,.35],[.09,.37,.22]);mane.rotation.x=-.35}
+ // Layered eyes on every animal: visible sclera, iris, pupil and catchlight.
+ if(parts.head){
+  const eyeWhite=new THREE.MeshStandardMaterial({color:0xe8dfc9,roughness:.48});
+  const irisMat=new THREE.MeshStandardMaterial({color:species==='Elephant'?0x5a4030:0x754526,roughness:.38});
+  const pupilMat=new THREE.MeshStandardMaterial({color:0x090807,roughness:.22});
+  const glintMat=new THREE.MeshBasicMaterial({color:0xffffff});
+  const eyeX=species==='Elephant'?.29:species==='Lion'?.17:species==='Giraffe'?.145:.15;
+  const eyeY=species==='Elephant'?.15:.105,eyeZ=species==='Elephant'?.27:species==='Lion'?.33:.285;
+  for(const side of [-1,1]){
+   blob(parts.head,eyeWhite,[side*eyeX,eyeY,eyeZ],[.073,.061,.043]);
+   blob(parts.head,irisMat,[side*eyeX,eyeY-.002,eyeZ+.034],[.043,.046,.023]);
+   blob(parts.head,pupilMat,[side*eyeX,eyeY-.002,eyeZ+.052],[.024,.033,.014]);
+   blob(parts.head,glintMat,[side*eyeX-.009,eyeY+.016,eyeZ+.064],[.009,.009,.006]);
+  }
+ }
  parts.tail=tube(root,[[0,.98,-.72],[.02,.78,-1.02],[.08,.55,-1.22],[.08,.42,-1.32]],species==='Lion'?.045:.027,dark,16);
  if(species==='Lion')blob(root,dark,[.08,.4,-1.34],[.09,.12,.12]);
  root.scale.setScalar(scale);return {root,parts};
@@ -410,15 +425,15 @@ u.moveSpeed+=(targetSpeed-u.moveSpeed)*Math.min(1,dt*(moving?1.9:2.8));
 const stride=u.moveSpeed;const forwardX=Math.sin(c.rotation.y),forwardZ=Math.cos(c.rotation.y);
 c.position.x+=forwardX*stride*dt;c.position.z+=forwardZ*stride*dt;
 if(moving&&dist<.7){u.moveSpeed*=.86}
-if(moving){u.walk+=dt*stride*5;u.gait+=dt*stride*(u.action==='flee'||u.action==='hunt'?10:7)}
+if(moving){u.walk+=dt*stride*5;u.gait+=dt*(2.8+stride*5.2)*(u.action==='flee'||u.action==='hunt'?1.22:1)}
 else{u.moveSpeed*=Math.max(0,1-dt*2.4);if(u.action==='drink')u.thirst=Math.max(0,u.thirst-dt*.22);if(u.action==='graze'){const node=foodNodes.find(n=>n.regrow<=0&&Math.hypot(n.x-c.position.x,n.z-c.position.z)<.85);if(node){u.hunger=Math.max(0,u.hunger-dt*.25);if(u.hunger<.12)node.regrow=28}}}
 }
-u.animTime+=dt;const x=c.position.x,z=c.position.z;c.position.y=heightAt(x,z);
+u.animTime+=dt;const x=c.position.x,z=c.position.z;c.position.y=heightAt(x,z)+(moving?Math.abs(Math.sin(u.gait*2))*.018:0);
 if(u.legs&&u.legs.length){
  const gait=Math.sin(u.gait),idle=Math.sin(u.animTime*1.4+u.phase)*.025;
- u.legs.forEach((leg,i)=>{const phase=(i===0||i===3)?0:Math.PI;leg.rotation.x=moving?Math.sin(u.gait+phase)*(u.action==='flee'?0.72:.42):idle});
+ u.legs.forEach((leg,i)=>{const phase=(i===0||i===3)?0:Math.PI;leg.rotation.x=moving?Math.sin(u.gait+phase)*(u.action==='flee'?0.62:.52):idle;});
  if(u.parts?.tail)u.parts.tail.rotation.y=Math.sin(u.animTime*2.1+u.phase)*.13;
- if(u.parts?.knees)u.parts.knees.forEach((k,i)=>{k.rotation.x=moving?Math.max(0,Math.sin(u.gait+(i===0||i===3?0:Math.PI)))*.34:0});
+ if(u.parts?.knees)u.parts.knees.forEach((k,i)=>{const phase=(i===0||i===3)?0:Math.PI;k.rotation.x=moving?Math.max(0,Math.sin(u.gait+phase))*.48:0});
  if(u.parts?.head){const lookDown=(u.action==='graze'||u.action==='drink')?.22:0;u.parts.head.rotation.x+=(lookDown-u.parts.head.rotation.x)*Math.min(1,dt*2.5)}
 }
 }
