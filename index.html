@@ -51,6 +51,13 @@ for(let ix=0;ix<cols;ix++)for(let iz=0;iz<cols;iz++){
 function instanced(material,matrices){const m=new THREE.InstancedMesh(block,materials[material],matrices.length);matrices.forEach((v,i)=>m.setMatrixAt(i,v));m.instanceMatrix.needsUpdate=true;m.castShadow=!mobile;m.receiveShadow=true;world.add(m);return m}
 for(const [name,arr] of Object.entries(topInstances))if(arr.length)instanced(name,arr);
 instanced('soil',soilInstances);
+// Broad ground continuation hides the exposed underside at the terrain boundary.
+// It extends beyond the camera fog so the world reads as continuous land, not a floating tile.
+const worldBase=new THREE.Mesh(new THREE.PlaneGeometry(620,620),materials.savanna);
+worldBase.rotation.x=-Math.PI/2;
+worldBase.position.y=-.08;
+worldBase.receiveShadow=true;
+world.add(worldBase);
 // Broad, stepped voxel mountains replace the old cone-shaped spike silhouettes.
 function addVoxelMountain(cx,cz,baseRadius,tiers){
  const rockBlocks=[],snowBlocks=[];
