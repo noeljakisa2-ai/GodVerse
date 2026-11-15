@@ -339,6 +339,10 @@ if(threat&&threatDist<7){u.action='flee';const dx=c.position.x-threat.position.x
 else if(u.diet==='predator'&&u.hunger>.32){let prey=null,best=8;for(const other of creatures.children){if(other===c||other.userData.diet!=='grazer')continue;const d=Math.hypot(other.position.x-c.position.x,other.position.z-c.position.z);if(d<best){best=d;prey=other}}if(prey){u.action='hunt';u.target.set(prey.position.x,0,prey.position.z);u.think=.25;if(best<.72){creatures.remove(prey);u.hunger=Math.max(0,u.hunger-.58);u.health=Math.min(1,u.health+.12);notify('A lion caught its prey.')}}}
 if(u.think<=0){u.think=1.1+Math.random()*1.4;const waterDist=Math.hypot(c.position.x-11,c.position.z);if(u.thirst>.38){u.action='drink';const a=Math.atan2(c.position.z,c.position.x-11);u.target.set(11+Math.cos(a)*2.1,0,Math.sin(a)*2.1)}else if(u.diet==='grazer'&&u.hunger>.28){let node=null,best=Infinity;for(const n of foodNodes){if(n.regrow>0)continue;const d=Math.hypot(n.x-c.position.x,n.z-c.position.z);if(d<best){best=d;node=n}}if(node){u.action='graze';u.target.set(node.x,0,node.z)}else{u.action='wander';const a=Math.random()*Math.PI*2,d=2+Math.random()*5;u.target.set(Math.max(-15,Math.min(15,c.position.x+Math.cos(a)*d)),0,Math.max(-15,Math.min(15,c.position.z+Math.sin(a)*d)))}}else if(u.action!=='hunt'&&u.action!=='flee'){u.action='wander';const a=Math.random()*Math.PI*2,d=1.5+Math.random()*5;u.target.set(Math.max(-15,Math.min(15,c.position.x+Math.cos(a)*d)),0,Math.max(-15,Math.min(15,c.position.z+Math.sin(a)*d)))}}
 let dx=u.target.x-c.position.x,dz=u.target.z-c.position.z;
+let separationX=0,separationZ=0;
+const bodyRadius={Elephant:1.12,Lion:.82,Giraffe:.78,Zebra:.76,Antelope:.66}[u.species]||.75;
+for(const other of creatures.children){if(other===c)continue;const ox=c.position.x-other.position.x,oz=c.position.z-other.position.z,d=Math.hypot(ox,oz);const otherRadius={Elephant:1.12,Lion:.82,Giraffe:.78,Zebra:.76,Antelope:.66}[other.userData.species]||.75;const safe=bodyRadius+otherRadius+.22;if(d>0&&d<safe*1.65){const force=(safe*1.65-d)/(safe*1.65);separationX+=ox/d*force;separationZ+=oz/d*force}}
+dx+=separationX*2.8;dz+=separationZ*2.8;
 if(u.diet==='grazer'&&u.action==='wander'){
 let hx=0,hz=0,alignX=0,alignZ=0,count=0,avoidX=0,avoidZ=0;
 for(const other of creatures.children){if(other===c||other.userData.diet!=='grazer')continue;
@@ -369,6 +373,9 @@ if(u.legs&&u.legs.length){
  if(u.parts?.head){const lookDown=(u.action==='graze'||u.action==='drink')?.22:0;u.parts.head.rotation.x+=(lookDown-u.parts.head.rotation.x)*Math.min(1,dt*2.5)}
 }
 }
+// Resolve body-to-body overlap for every species, including predators and animals at rest.
+if(dt>0){const list=creatures.children;const radii={Elephant:1.12,Lion:.82,Giraffe:.78,Zebra:.76,Antelope:.66};
+for(let i=0;i<list.length;i++){const a=list[i];for(let j=i+1;j<list.length;j++){const b=list[j];let ox=b.position.x-a.position.x,oz=b.position.z-a.position.z,d=Math.hypot(ox,oz);const min=(radii[a.userData.species]||.75)+(radii[b.userData.species]||.75)+.18;if(d<min){if(d<.0001){const angle=(i*17+j*31)*.37;ox=Math.cos(angle)*.001;oz=Math.sin(angle)*.001;d=.001}const push=(min-d)*.52, nx=ox/d,nz=oz/d;a.position.x-=nx*push;a.position.z-=nz*push;b.position.x+=nx*push;b.position.z+=nz*push;a.position.y=heightAt(a.position.x,a.position.z);b.position.y=heightAt(b.position.x,b.position.z)}}}}
 if(dt>0){for(const t of heroTreeCrowns){t.pivot.rotation.z=Math.sin(now*.00055+t.phase)*t.amount;t.pivot.rotation.x=Math.cos(now*.00043+t.phase)*t.amount*.65}}
 if(rainDrops&&dt>0){const a=rainDrops.geometry.attributes.position;for(let i=0;i<a.count;i++){let y=a.getY(i)-dt*(weatherMode==='storm'?19:12);if(y<0)y=24;a.setY(i,y)}a.needsUpdate=true}controls.update();renderer.render(scene,camera)}}requestAnimationFrame(animate);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});updateStats();
 </script></body></html>
