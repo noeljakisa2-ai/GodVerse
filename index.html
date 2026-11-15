@@ -34,7 +34,17 @@ snow:new THREE.MeshStandardMaterial({color:0xe5e6dc,roughness:1}),water:new THRE
 trunk:new THREE.MeshStandardMaterial({color:0x60432b,roughness:1}),leaf1:new THREE.MeshStandardMaterial({color:0x486b3d,roughness:1}),leaf2:new THREE.MeshStandardMaterial({color:0x718b43,roughness:1}),leaf3:new THREE.MeshStandardMaterial({color:0x315a39,roughness:1})
 };
 const cell=1.4,half=70,cols=101,topInstances={grass:[],savanna:[],forest:[],sand:[],rock:[],snow:[]},soilInstances=[];
-function biome(x,z){if(x>18&&z<-10)return 'desert';if(x<-18&&z<4)return 'forest';if(x<-16&&z>15)return 'wetland';if(x>14&&z>15)return 'highland';if(Math.abs(x)>39||Math.abs(z)>39)return 'shore';return 'savanna'}
+function biome(x,z){
+ // Wavy boundaries break up straight biome borders and create more organic terrain regions.
+ const edgeA=Math.sin(z*.105)*3.8+Math.sin(z*.037+1.4)*2.4;
+ const edgeB=Math.sin(x*.09+2)*3.2+Math.cos(x*.045)*2.1;
+ if(x>18+edgeA&&z<-10+edgeB)return 'desert';
+ if(x<-18+edgeA&&z<4+edgeB)return 'forest';
+ if(x<-16+edgeA&&z>15+edgeB)return 'wetland';
+ if(x>14+edgeA&&z>15+edgeB)return 'highland';
+ if(Math.abs(x)>39+edgeA||Math.abs(z)>39+edgeB)return 'shore';
+ return 'savanna'
+}
 function rawHeight(x,z){let h=2.2+Math.sin(x*.095)*1.2+Math.cos(z*.11)*1.05+Math.sin((x+z)*.065)*1.2;h+=Math.max(0,1-Math.hypot(x+23,z-21)/22)*11;h+=Math.max(0,1-Math.hypot(x-25,z+22)/19)*8;h+=Math.max(0,1-Math.hypot(x-2,z-30)/13)*5;return h}
 const riverPts=[[-47,-19],[-34,-14],[-23,-8],[-14,-2],[-5,5],[5,11],[14,17],[24,25],[39,34]].map(([x,z])=>new THREE.Vector3(x,0,z));
 const curve=new THREE.CatmullRomCurve3(riverPts);
@@ -84,10 +94,30 @@ addVoxelMountain(-23.8,21,10.5,8);
 addVoxelMountain(25.2,-22.4,9.5,7);
 addVoxelMountain(2.8,30.8,7.5,6);
 // Voxel trees: squared trunks and layered block canopies, varied silhouettes.
-function tree(x,z,type){const y=heightAt(x,z),g=new THREE.Group();const trunk=new THREE.Mesh(new THREE.BoxGeometry(.55,2.5,.55),materials.trunk);trunk.position.y=1.25;g.add(trunk);
- if(type==='acacia'){const stem=new THREE.Mesh(new THREE.BoxGeometry(.38,1.5,.38),materials.trunk);stem.position.y=2.7;g.add(stem);const crown=new THREE.Mesh(new THREE.BoxGeometry(4.2,.8,2.5),materials.leaf2);crown.position.y=3.7;g.add(crown);const crown2=new THREE.Mesh(new THREE.BoxGeometry(2.9,.6,2),materials.leaf1);crown2.position.y=4.15;g.add(crown2)}
- else{for(let k=0;k<3;k++){const crown=new THREE.Mesh(new THREE.BoxGeometry(2.5-k*.45,1.8,2.5-k*.45),materials[type==='forest'?'leaf3':'leaf1']);crown.position.y=2.4+k*1.2;g.add(crown)}}
- g.position.set(x,y,z);g.rotation.y=Math.random()*Math.PI*2;g.scale.setScalar(.8+Math.random()*.45);g.traverse(o=>{if(o.isMesh)o.castShadow=!mobile});world.add(g)}
+function tree(x,z,type){
+ const y=heightAt(x,z),g=new THREE.Group();
+ const trunk=new THREE.Mesh(new THREE.BoxGeometry(.52,2.7,.52),materials.trunk);trunk.position.y=1.35;g.add(trunk);
+ const limb=(w,h,d,px,py,pz,mat)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(px,py,pz);g.add(m)};
+ if(type==='acacia'){
+  limb(.34,1.45,.34,0,2.8,0,materials.trunk);
+  // Broad, uneven umbrella crown with separate lobes and visible branch arms.
+  limb(1.65,.28,.3,-.85,3.35,0,materials.trunk);limb(1.55,.28,.3,.82,3.35,.05,materials.trunk);
+  limb(2.5,.65,2.15,-.9,3.85,0,materials.leaf2);
+  limb(2.15,.58,2.25,1.0,3.9,.05,materials.leaf1);
+  limb(1.45,.48,1.55,.05,4.15,-.05,materials.leaf2);
+ }else{
+  const foliage=type==='forest'?materials.leaf3:materials.leaf1;
+  const tiers=3+Math.floor(Math.random()*2),spread=1.9+Math.random()*.8;
+  for(let k=0;k<tiers;k++){
+   const width=spread*(1-k*.19),depth=spread*(1-k*.17),height=1.35+Math.random()*.45;
+   limb(width,height,depth,(Math.random()-.5)*.3,2.35+k*1.05,(Math.random()-.5)*.3,k%2?materials.leaf2:foliage);
+  }
+  // Short blocky side branches keep the silhouette from looking like a perfect stack.
+  for(let side of [-1,1])limb(.75,.42,.55,side*.82,2.85+Math.random()*.8,0,foliage);
+ }
+ g.position.set(x,y,z);g.rotation.y=Math.random()*Math.PI*2;g.scale.setScalar(.82+Math.random()*.42);
+ g.traverse(o=>{if(o.isMesh)o.castShadow=!mobile});world.add(g)
+}
 for(let i=0;i<(mobile?70:125);i++){const x=(Math.random()-.5)*88,z=(Math.random()-.5)*88,b=biome(x,z);if(Math.hypot(x,z)<7||Math.hypot(x-7,z-15)<8)continue;tree(x,z,b==='forest'?'forest':'acacia')}
 // Layered voxel-friendly grass tufts: broad tapered blades instead of thin square sticks.
 const bladeShape=new THREE.Shape();bladeShape.moveTo(-.16,0);bladeShape.quadraticCurveTo(-.12,.42,0,.82);bladeShape.quadraticCurveTo(.18,.38,.16,0);bladeShape.close();
