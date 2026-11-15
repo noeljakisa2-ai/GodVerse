@@ -16,8 +16,9 @@ header{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-be
 <header><div class="brand">GODVERSE<small>THE LIVING LANDSCAPE</small></div><div class="status" id="status">● LANDSCAPE READY</div></header>
 <div class="hint">Drag to look • Pinch / scroll to zoom</div>
 <script type="module">
-import * as THREE from 'three';
-import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+async function start(){
+const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js');
+const {OrbitControls} = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js');
 const mobile=matchMedia('(max-width:760px),(pointer:coarse)').matches;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x91bfd1);scene.fog=new THREE.Fog(0x91bfd1,155,360);
 const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,500);camera.position.set(38,38,48);
@@ -33,7 +34,7 @@ rock:new THREE.MeshStandardMaterial({color:0x777b72,roughness:1}),soil:new THREE
 snow:new THREE.MeshStandardMaterial({color:0xe5e6dc,roughness:1}),water:new THREE.MeshStandardMaterial({color:0x347f9a,roughness:.2,metalness:.15,transparent:true,opacity:.88}),
 trunk:new THREE.MeshStandardMaterial({color:0x60432b,roughness:1}),leaf1:new THREE.MeshStandardMaterial({color:0x486b3d,roughness:1}),leaf2:new THREE.MeshStandardMaterial({color:0x718b43,roughness:1}),leaf3:new THREE.MeshStandardMaterial({color:0x315a39,roughness:1})
 };
-const cell=1.4,half=70,cols=101,topInstances={grass:[],savanna:[],forest:[],sand:[],rock:[],snow:[]},soilInstances=[];
+const cell=1.4,half=70,cols=mobile?75:101,topInstances={grass:[],savanna:[],forest:[],sand:[],rock:[],snow:[]},soilInstances=[];
 function biome(x,z){
  // Wavy boundaries break up straight biome borders and create more organic terrain regions.
  const edgeA=Math.sin(z*.105)*3.8+Math.sin(z*.037+1.4)*2.4;
@@ -153,7 +154,27 @@ const sunDisc=new THREE.Mesh(new THREE.SphereGeometry(2.5,18,12),new THREE.MeshB
 let cloudVisible=true,raining=false,raindrops=null;
 function setRain(on){raining=on;if(raindrops){scene.remove(raindrops);raindrops.geometry.dispose();raindrops=null}if(on){const count=mobile?400:1100,geo=new THREE.BufferGeometry(),pos=new Float32Array(count*3);for(let i=0;i<count;i++){pos[i*3]=(Math.random()-.5)*100;pos[i*3+1]=Math.random()*38;pos[i*3+2]=(Math.random()-.5)*100}geo.setAttribute('position',new THREE.BufferAttribute(pos,3));raindrops=new THREE.Points(geo,new THREE.PointsMaterial({color:0xd6edf5,size:.1,transparent:true,opacity:.7}));scene.add(raindrops);scene.background.set(0x718f9e);scene.fog.color.set(0x718f9e)}else{scene.background.set(0x91bfd1);scene.fog.color.set(0x91bfd1)}}
 // Dashboard removed for now; world controls will return as a redesigned interface later.
-let last=performance.now();function animate(now){requestAnimationFrame(animate);const dt=Math.min((now-last)/1000,.05);last=now;for(const c of clouds)c.position.x+=c.userData.drift*dt;if(raindrops){const p=raindrops.geometry.attributes.position;for(let i=0;i<p.count;i++){let y=p.getY(i)-dt*19;if(y<0)y=38;p.setY(i,y)}p.needsUpdate=true}controls.update();renderer.render(scene,camera)}requestAnimationFrame(animate);
+let last=performance.now(),firstFrame=true;
+function animate(now){
+ requestAnimationFrame(animate);
+ const dt=Math.min((now-last)/1000,.05);last=now;
+ for(const c of clouds)c.position.x+=c.userData.drift*dt;
+ if(raindrops){const p=raindrops.geometry.attributes.position;for(let i=0;i<p.count;i++){let y=p.getY(i)-dt*19;if(y<0)y=38;p.setY(i,y)}p.needsUpdate=true}
+ controls.update();renderer.render(scene,camera);
+ if(firstFrame){firstFrame=false;document.querySelector('#status').textContent='● WORLD RENDERED'}
+}
+renderer.render(scene,camera);
+requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
-document.querySelector('#status').textContent='● LANDSCAPE READY';
+}
+start().catch(error=>{
+ const status=document.querySelector('#status');
+ status.textContent='● WORLD FAILED TO LOAD';
+ status.style.background='#762f2f';
+ const panel=document.createElement('div');
+ panel.style.cssText='position:fixed;left:12px;right:12px;top:78px;padding:12px;background:#321d1deF;color:#fff;border:1px solid #ffaaaa;border-radius:10px;z-index:10;font:12px system-ui;overflow-wrap:anywhere';
+ panel.textContent='GodVerse could not start the 3D engine: '+(error?.message||String(error))+' — check your connection and reload.';
+ document.body.appendChild(panel);
+ console.error('GodVerse startup error:',error);
+});
 </script></body></html>
